@@ -6,6 +6,14 @@ Link chơi: https://vietptit.github.io/bus-loop-3d/ · Repo: https://github.com/
 
 ---
 
+## v3.2 — Màn hình chính theo thiết kế của bạn (2026-11-05)
+- Dùng tranh màn hình chính do bạn thiết kế (`assets/home_bg.webp`, 610×1024) làm nền; ảnh được **nhúng thẳng vào `bus_loop_3d.html`** (base64) để mở file trực tiếp vẫn hiện.
+- Ảnh có viền khung điện thoại ở mép phải/dưới → cắt bằng `background-size: 105.6% 102.4%`.
+- Nút thật (xu, tim, ⚙️, CHƠI + số màn, thanh điều hướng) đặt **đè đúng vị trí** nút vẽ sẵn → số xu/màn luôn đúng.
+  Nếu đổi ảnh khác, chỉnh các % trong CSS `.home .top / .homeplay / .nav`.
+- Bỏ cảnh CSS và xe emoji cũ ở Home.
+- Trong game: thanh trên/dưới cách mép rộng hơn (14px hai bên, 16–20px trên/dưới).
+
 ## v3.1 — Hiệu ứng UI (2026-11-05)
 - Bản vá do **Codex (medium, chế độ chỉ đọc)** viết, Claude duyệt + áp: `tools/patch_ui_polish.json`.
   - Home mờ dần/trượt khi vào–ra; popup (kết quả, chọn màn, cài đặt, cửa hàng) bật nảy.
