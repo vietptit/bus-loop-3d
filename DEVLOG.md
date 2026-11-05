@@ -92,3 +92,7 @@ Kiểm thử: 50/50 màn thắng khi chạy lời giải mẫu.
 
 ## Lưu ý khi cập nhật
 - GitHub Pages cho trình duyệt giữ cache 10 phút. Mỗi lần phát hành: **tăng số `?v=` trong `index.html`** để người chơi nhận bản mới ngay.
+
+## v3.3 — Ảnh nền Home sạch (2026-11-05)
+- Thay `assets/home_bg.webp` bằng tranh mới của bạn (572×1024, không có nút vẽ sẵn); cắt viền khung bằng `102.6% 101.6%`.
+- `index.html` → `?v=3.3`.
