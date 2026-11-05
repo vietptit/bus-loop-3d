@@ -137,3 +137,11 @@ Kiểm thử: 50/50 màn thắng khi chạy lời giải mẫu.
 - Vệt đen nhọn trong ảnh của bạn: dựng lại cùng màn + cùng đường zíc-zắc nhưng không tái hiện được (nghi là con trỏ chuột lúc chụp).
 - Kiểm tra: ảnh cận cảnh (đầu đường trên cầu, xe trên cầu, xe dưới gầm, toàn bàn) + 50/50 màn thắng.
 - `index.html` → `?v=3.8`.
+
+## v3.9 — Cầu vắt ngang màn hình (2026-11-05)
+- Vấn đề: cầu chạy dọc theo hướng camera nên vòm che đầu xe đỗ phía sau, chân vòm còn lấn 0.4 ô vào ô xe đỗ.
+- Giải pháp: **xoay cầu nằm ngang (trục x)** → camera nhìn thấy mặt bên nên **thấy rõ hình vòm**, xe đỗ sau cầu không bị che. Xe đi **ngang** chạy trên cầu, xe đi **dọc** chui dưới (luật không đổi: đi thẳng qua ô cầu).
+- Vòm ngắn lại: cao 0.7, chỉ lấn 0.25 ô sang hai bên (chân vòm cao 0.18 ở vị trí mũi xe đỗ cạnh). Xe 9 chỗ 0.68. Khoảng hở dưới gầm: 0.16 / 0.08 / 0.03.
+- Độ nghiêng thân xe khi leo vòm giới hạn ±34° cho tự nhiên.
+- Kiểm tra: ảnh màn 25 & 26 (chưa chạy / xe trên cầu / xe dưới gầm) + 50/50 màn thắng.
+- `index.html` → `?v=3.9`.
