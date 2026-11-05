@@ -101,3 +101,9 @@ Kiểm thử: 50/50 màn thắng khi chạy lời giải mẫu.
 - Icon (xu, tim, bánh răng, cửa hàng 24H, nhà, bản đồ) cắt từ mockup của bạn `assets/ui_mock.webp` (nhúng 1 lần, dùng kiểu sprite: class `.ico .ico-coin` ...; toạ độ trong CSS).
 - Khung xanh bóng viền xanh đậm `#12306b`, nút CHƠI to viền đậm, tab đang chọn sáng hơn.
 - `index.html` → `?v=3.4`.
+
+## v3.5 — Icon SVG nét + thanh dưới thoáng (2026-11-05)
+- 6 icon (xu, tim, bánh răng, cửa hàng 24H, nhà, bản đồ) **vẽ lại bằng SVG** (`tools/icons.js`): nền trong suốt, không vỡ khi phóng to. Bỏ icon cắt từ ảnh mockup (bị dính nền) và bỏ ảnh `ui_mock.webp`.
+- Thanh dưới trong game: nút 46px, cách nhau 9–10px, bộ đếm và nút CHẠY không dính nhau.
+- Codex `gpt-6.1-sol` (high) bị treo vì chờ stdin → lần sau chạy kèm `< /dev/null`. Lần này Claude tự vẽ icon.
+- `index.html` → `?v=3.5`.
