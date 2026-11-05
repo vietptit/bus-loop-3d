@@ -748,20 +748,25 @@ function buildWorld() {
 }
 
 /* ---------- overpass: z-direction drives over the bridge, x-direction passes underneath ---------- */
-const BRIDGE_H = 0.62, RAMP_RUN = 0.62;   // compact bridge: deck inside its cell, ramps reach half a neighbour cell
+// Arched (hump-back) bridge along z. Height profile: flat-ish top, gentle feet.
+const ARCH_H = 0.58, ARCH_S = 0.85;            // peak height, half-length (cell half = 0.5 → reaches 0.35 into neighbours)
+function archY(d) {
+  if (d >= ARCH_S) return 0;
+  return ARCH_H * (0.5 + 0.5 * Math.cos(Math.PI * Math.pow(d / ARCH_S, 1.6)));
+}
+// A band that follows the arch: top = arch + hi, bottom = max(0, arch + lo); extruded across x.
+function archBand(width, lo, hi, xc) {
+  const N = 28, sh = new THREE.Shape();
+  for (let k = 0; k <= N; k++) { const z = -ARCH_S + 2 * ARCH_S * k / N; const y = archY(Math.abs(z)) + hi; k ? sh.lineTo(z, y) : sh.moveTo(z, y); }
+  for (let k = N; k >= 0; k--) { const z = -ARCH_S + 2 * ARCH_S * k / N; sh.lineTo(z, Math.max(0, archY(Math.abs(z)) + lo)); }
+  const geo = new THREE.ExtrudeGeometry(sh, { depth: width, bevelEnabled: false, steps: 1, curveSegments: 1 });
+  geo.rotateY(Math.PI / 2); geo.translate(xc - width / 2, 0, 0); geo.computeVertexNormals();
+  return geo;
+}
 function createCross(p) {
   const g = new THREE.Group(); g.position.copy(W(p)); root.add(g);
-  const deckM = M(0xfff1dc), sideM = M(0x5aa8ff), railM = M(0xffffff);
-  mk(RB(0.56, 0.06, 1.0, 0.025), deckM, g, 0, BRIDGE_H - 0.03, 0);
-  for (const sx of [-1, 1]) {
-    mk(RB(0.035, 0.05, 1.0, 0.015), railM, g, sx * 0.27, BRIDGE_H + 0.025, 0);
-    for (const sz of [-1, 1]) {
-      mk(RB(0.06, BRIDGE_H - 0.06, 0.06, 0.02), sideM, g, sx * 0.25, (BRIDGE_H - 0.06) / 2, sz * 0.45);
-      const len = Math.hypot(RAMP_RUN, BRIDGE_H), ang = Math.atan2(BRIDGE_H, RAMP_RUN);
-      const ramp = mk(RB(0.56, 0.05, len, 0.02), deckM, g, 0, BRIDGE_H / 2 - 0.025 * Math.cos(ang), sz * (0.5 + RAMP_RUN / 2));
-      ramp.rotation.x = sz * ang;
-    }
-  }
+  mk(archBand(0.78, -0.08, 0, 0), M(0xc9e6ff), g);                    // light-blue deck (road ribbon is drawn on top of it)
+  for (const sx of [-1, 1]) mk(archBand(0.08, -0.06, 0.08, sx * 0.4), M(0x2f80ed), g);   // chunky curved side rails
 }
 
 /* ---------- teleport tube ---------- */
@@ -1052,13 +1057,24 @@ function headingAt(pl, d) {
   if (Math.hypot(b.x - a.x, b.z - a.z) < 1e-4) return null;
   return Math.atan2(-(b.x - a.x), -(b.z - a.z));
 }
-function ribbon(pl, width, y, mat, uvScale = 0) {
+function densify(pl, step) {
+  const P = [], C = [];
+  for (let i = 0; i < pl.pts.length - 1; i++) {
+    const a = pl.pts[i], b = pl.pts[i + 1], seg = pl.cum[i + 1] - pl.cum[i], k = Math.max(1, Math.ceil(seg / step));
+    for (let j = 0; j < k; j++) { const u = j / k; P.push({ x: lerp(a.x, b.x, u), z: lerp(a.z, b.z, u) }); C.push(pl.cum[i] + seg * u); }
+  }
+  P.push(pl.pts.at(-1)); C.push(pl.cum.at(-1));
+  return { pts: P, cum: C };
+}
+function ribbon(pl, width, y, mat, uvScale = 0, lift = null) {
+  if (lift) pl = densify(pl, 0.06);
   const { pts, cum } = pl, n = pts.length, pos = [], uv = [], idx = [], h = width / 2;
   for (let i = 0; i < n; i++) {
     const a = pts[Math.max(0, i - 1)], b = pts[Math.min(n - 1, i + 1)];
     let tx = b.x - a.x, tz = b.z - a.z; const l = Math.hypot(tx, tz) || 1; tx /= l; tz /= l;
     const nx = -tz, nz = tx;
-    pos.push(pts[i].x + nx * h, y, pts[i].z + nz * h, pts[i].x - nx * h, y, pts[i].z - nz * h);
+    const yy = y + (lift ? lift(pts[i]) : 0);
+    pos.push(pts[i].x + nx * h, yy, pts[i].z + nz * h, pts[i].x - nx * h, yy, pts[i].z - nz * h);
     const u = uvScale ? cum[i] / uvScale : 0; uv.push(u, 1, u, 0);
     if (i < n - 1) idx.push(2 * i, 2 * i + 2, 2 * i + 1, 2 * i + 1, 2 * i + 2, 2 * i + 3);
   }
@@ -1085,20 +1101,31 @@ function roadMat(kind, color) {
   m.userData.shared = true; roadMats[k] = m; return m;
 }
 let tipMarks = [];
+// lift function for a route: raises the road where it passes over a bridge (straight along z through a cross cell)
+function bridgeLift(route) {
+  const overs = [];
+  route.forEach((p, k) => {
+    if (!isCross(L, p) || k === 0 || k === route.length - 1) return;
+    if (route[k - 1][0] === p[0] && route[k + 1][0] === p[0]) overs.push(W(p));
+  });
+  if (!overs.length) return null;
+  return pt => { let m = 0; for (const o of overs) if (Math.abs(pt.x - o.x) < 0.42) m = Math.max(m, archY(Math.abs(pt.z - o.z))); return m; };
+}
 function rebuildRoutes() {
   routeObjs.forEach(o => { root.remove(o); disposeObj(o); }); routeObjs = [];
   tipMarks = [];
   if (hint && mode === 'draw') {
     const b = L.buses[sel];
-    for (const pc of pieces(polyline(b.solution))) { if (pc.pts.length > 1) ribbon(pc, 0.34, 0.05, roadMat('ghost', COLORS[b.color])); cap(pc.pts.at(-1), 0.17, 0.05, roadMat('ghost', COLORS[b.color])); }
+    const gl = bridgeLift(b.solution);
+    for (const pc of pieces(polyline(b.solution))) { if (pc.pts.length > 1) ribbon(pc, 0.34, 0.05, roadMat('ghost', COLORS[b.color]), 0, gl); cap(pc.pts.at(-1), 0.17, 0.05, roadMat('ghost', COLORS[b.color])); }
   }
   paths.forEach((r, i) => {
     if (r.length < 2) return;
     const pl = polyline(r), col = COLORS[L.buses[i].color];
     const edge = roadMat('edge', tint(col, 0.25)), road = roadMat('road', tint(col, 0.72));
-    const yo = i * 0.0025;
+    const yo = i * 0.0025, lift = bridgeLift(r);
     for (const pc of pieces(pl)) {
-      if (pc.pts.length > 1) { ribbon(pc, 0.74, 0.026 + yo, edge); ribbon(pc, 0.58, 0.032 + yo, road); ribbon(pc, 0.24, 0.038 + yo, roadMat('chev', col), 0.36); }
+      if (pc.pts.length > 1) { ribbon(pc, 0.74, 0.026 + yo, edge, 0, lift); ribbon(pc, 0.58, 0.032 + yo, road, 0, lift); ribbon(pc, 0.24, 0.038 + yo, roadMat('chev', col), 0.36, lift); }
       cap(pc.pts[0], 0.37, 0.026 + yo, edge); cap(pc.pts.at(-1), 0.37, 0.026 + yo, edge);
       cap(pc.pts[0], 0.29, 0.032 + yo, road); cap(pc.pts.at(-1), 0.29, 0.032 + yo, road);
     }
@@ -1604,12 +1631,10 @@ function bridgeAnchors(r) {
   });
   return r.overs;
 }
-function tunnelY(r) {
-  for (const a of bridgeAnchors(r)) {
-    const d = Math.abs(r.dist - a);
-    if (d < 0.5 + RAMP_RUN) return BRIDGE_H * easeInOut(clamp((0.5 + RAMP_RUN - d) / RAMP_RUN, 0, 1));
-  }
-  return 0;
+function tunnelY(r, dd = r.dist) {
+  let m = 0;
+  for (const a of bridgeAnchors(r)) m = Math.max(m, archY(Math.abs(dd - a)));
+  return m;
 }
 function settle(u, dt) {
   const k = 1 - Math.exp(-dt * 7);
@@ -1679,14 +1704,16 @@ function updateRunners(dt) {
     const w = dt > 0 ? dh / dt : 0, acc = dt > 0 ? (r.v - vPrev) / dt : 0;
     u.lean = lerp(u.lean, clamp(-w * r.v * 0.055, -0.22, 0.22), 1 - Math.exp(-dt * 9));
     u.pitch = lerp(u.pitch || 0, clamp(acc * 0.014, -0.08, 0.05), 1 - Math.exp(-dt * 7));
-    u.body.rotation.z = u.lean; u.body.rotation.x = u.pitch;
+    const archPitch = Math.atan((tunnelY(r, r.dist + 0.04) - tunnelY(r, r.dist - 0.04)) / 0.08);   // nose up climbing, down descending
+    u.body.rotation.z = u.lean; u.body.rotation.x = u.pitch + archPitch;
     bus.position.y = tunnelY(r) + Math.sin(r.dist * 10) * 0.005 * (r.v / VMAX);
     let under = 0;
     if (bus.position.y < 0.05) for (const c of L.cross) {
       const w = W(c); if (Math.abs(p.z - w.z) > 0.3) continue;
       under = Math.max(under, easeInOut(clamp((0.75 - Math.abs(p.x - w.x)) / 0.3, 0, 1)));
     }
-    bus.scale.set(u.baseScale, u.baseScale * (1 - 0.22 * under), u.baseScale);
+    const fit = Math.min(1, 0.42 / (0.733 * u.baseScale));
+    bus.scale.set(u.baseScale, u.baseScale * (1 - (1 - fit) * under), u.baseScale);
     u.wheels.forEach(wh => wh.rotation.x -= step / 0.15);
     r.puff -= dt;
     if (r.puff <= 0 && r.v > 0.6 && bus.position.y > -0.05) { r.puff = 0.14; bus.updateMatrixWorld(); puff(new THREE.Vector3(-0.26, 0.2, 0.72).applyMatrix4(bus.matrixWorld)); }

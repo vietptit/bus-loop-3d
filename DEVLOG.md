@@ -122,3 +122,10 @@ Kiểm thử: 50/50 màn thắng khi chạy lời giải mẫu.
 - Xe nhỏ lại: 3/6/9 chỗ = 0.62 / 0.72 / 0.84.
 - Xe trên cầu ngồi đúng mặt cầu, lan can thấp → không bị che. Xe dưới gầm hơi "thụp" 22% khi qua cầu → lọt gầm, không xuyên.
 - `index.html` → `?v=3.6`.
+
+## v3.7 — Cầu vòm gọn 1 ô, đường nằm trên cầu (2026-11-05)
+- Cầu dạng **vòm** (lưng gù, chân thoải): cao 0.58, dài 1.7 ô theo hướng xe đi trên cầu (lấn mỗi bên ~0.35 ô), rộng 0.78; mặt cầu xanh nhạt + lan can xanh đậm cong theo vòm; bỏ cột/dốc thẳng.
+- **Đường vẽ của xe đi trên cầu nằm trên mặt cầu**, uốn theo vòm (ribbon được chia nhỏ điểm và nâng theo `archY`). Gợi ý (ghost) cũng vậy.
+- Xe trên cầu chạy theo vòm, ngẩng/chúi đầu theo độ dốc. Xe dưới gầm "thụp" vừa đủ theo cỡ xe để lọt dưới vòm.
+- Kiểm tra: ảnh chụp cận cảnh (chưa vẽ / xe trên cầu / xe dưới gầm) + 17/17 màn có cầu vẫn thắng.
+- `index.html` → `?v=3.7`.
