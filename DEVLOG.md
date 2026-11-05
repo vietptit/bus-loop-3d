@@ -89,3 +89,6 @@ Kiểm thử: 50/50 màn thắng khi chạy lời giải mẫu.
 - Cửa hàng chưa cộng vật phẩm thật; tim chưa trừ khi thua.
 - Cân độ khó thủ công cho các màn sinh tự động.
 - Âm nhạc nền, hiệu ứng chuyển cảnh giữa các màn hình.
+
+## Lưu ý khi cập nhật
+- GitHub Pages cho trình duyệt giữ cache 10 phút. Mỗi lần phát hành: **tăng số `?v=` trong `index.html`** để người chơi nhận bản mới ngay.
