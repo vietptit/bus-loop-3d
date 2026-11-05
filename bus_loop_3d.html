@@ -748,19 +748,17 @@ function buildWorld() {
 }
 
 /* ---------- overpass: z-direction drives over the bridge, x-direction passes underneath ---------- */
-const BRIDGE_H = 0.82;
+const BRIDGE_H = 0.62, RAMP_RUN = 0.62;   // compact bridge: deck inside its cell, ramps reach half a neighbour cell
 function createCross(p) {
   const g = new THREE.Group(); g.position.copy(W(p)); root.add(g);
   const deckM = M(0xfff1dc), sideM = M(0x5aa8ff), railM = M(0xffffff);
-  mk(RB(0.7, 0.1, 1.0, 0.04), deckM, g, 0, BRIDGE_H - 0.05, 0);
-  mk(RB(0.74, 0.08, 1.02, 0.03), sideM, g, 0, BRIDGE_H - 0.13, 0);
+  mk(RB(0.56, 0.06, 1.0, 0.025), deckM, g, 0, BRIDGE_H - 0.03, 0);
   for (const sx of [-1, 1]) {
-    mk(RB(0.05, 0.1, 1.0, 0.02), railM, g, sx * 0.36, BRIDGE_H + 0.04, 0);
+    mk(RB(0.035, 0.05, 1.0, 0.015), railM, g, sx * 0.27, BRIDGE_H + 0.025, 0);
     for (const sz of [-1, 1]) {
-      mk(RB(0.1, BRIDGE_H - 0.15, 0.1, 0.03), sideM, g, sx * 0.4, (BRIDGE_H - 0.15) / 2, sz * 0.46);
-      // ramps reaching into the neighbouring cells along z
-      const run = 0.92, len = Math.hypot(run, BRIDGE_H), ang = Math.atan2(BRIDGE_H, run);
-      const ramp = mk(RB(0.7, 0.07, len, 0.03), deckM, g, 0, BRIDGE_H / 2 - 0.035 * Math.cos(ang), sz * (0.5 + run / 2));
+      mk(RB(0.06, BRIDGE_H - 0.06, 0.06, 0.02), sideM, g, sx * 0.25, (BRIDGE_H - 0.06) / 2, sz * 0.45);
+      const len = Math.hypot(RAMP_RUN, BRIDGE_H), ang = Math.atan2(BRIDGE_H, RAMP_RUN);
+      const ramp = mk(RB(0.56, 0.05, len, 0.02), deckM, g, 0, BRIDGE_H / 2 - 0.025 * Math.cos(ang), sz * (0.5 + RAMP_RUN / 2));
       ramp.rotation.x = sz * ang;
     }
   }
@@ -978,7 +976,7 @@ function busModel(colorName, cap) {
   }
   const badge = makeBadge(`0/${cap * perUnit()}`, '#ffffff', hex(colorName)); badge.position.set(0, 1.08, 0); badge.scale.set(0.42, 0.42, 1); g.add(badge);
   g.userData = { body, wheels, slots, per, squash: 0, badge, heading: 0, lean: 0, pitch: 0, shake: 0, hop: 0 };
-  const bs = cap <= 1 ? 0.7 : cap === 2 ? 0.82 : 0.96;
+  const bs = cap <= 1 ? 0.62 : cap === 2 ? 0.72 : 0.84;
   g.userData.baseScale = bs; g.scale.setScalar(bs);
   return g;
 }
@@ -1609,7 +1607,7 @@ function bridgeAnchors(r) {
 function tunnelY(r) {
   for (const a of bridgeAnchors(r)) {
     const d = Math.abs(r.dist - a);
-    if (d < 1.42) return BRIDGE_H * easeInOut(clamp((1.42 - d) / 0.92, 0, 1));
+    if (d < 0.5 + RAMP_RUN) return BRIDGE_H * easeInOut(clamp((0.5 + RAMP_RUN - d) / RAMP_RUN, 0, 1));
   }
   return 0;
 }
@@ -1683,6 +1681,12 @@ function updateRunners(dt) {
     u.pitch = lerp(u.pitch || 0, clamp(acc * 0.014, -0.08, 0.05), 1 - Math.exp(-dt * 7));
     u.body.rotation.z = u.lean; u.body.rotation.x = u.pitch;
     bus.position.y = tunnelY(r) + Math.sin(r.dist * 10) * 0.005 * (r.v / VMAX);
+    let under = 0;
+    if (bus.position.y < 0.05) for (const c of L.cross) {
+      const w = W(c); if (Math.abs(p.z - w.z) > 0.3) continue;
+      under = Math.max(under, easeInOut(clamp((0.75 - Math.abs(p.x - w.x)) / 0.3, 0, 1)));
+    }
+    bus.scale.set(u.baseScale, u.baseScale * (1 - 0.22 * under), u.baseScale);
     u.wheels.forEach(wh => wh.rotation.x -= step / 0.15);
     r.puff -= dt;
     if (r.puff <= 0 && r.v > 0.6 && bus.position.y > -0.05) { r.puff = 0.14; bus.updateMatrixWorld(); puff(new THREE.Vector3(-0.26, 0.2, 0.72).applyMatrix4(bus.matrixWorld)); }

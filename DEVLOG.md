@@ -107,3 +107,18 @@ Kiểm thử: 50/50 màn thắng khi chạy lời giải mẫu.
 - Thanh dưới trong game: nút 46px, cách nhau 9–10px, bộ đếm và nút CHẠY không dính nhau.
 - Codex `gpt-6.1-sol` (high) bị treo vì chờ stdin → lần sau chạy kèm `< /dev/null`. Lần này Claude tự vẽ icon.
 - `index.html` → `?v=3.5`.
+
+## Unity — Thiết kế hệ thống (2026-11-05)
+- Bản kiến trúc để bàn: `docs/UNITY_ARCHITECTURE.md` (4 tầng: Core C# thuần · Flow · Presentation · UI; dữ liệu màn JSON; cơ chế dạng plugin).
+- Đã chốt: project `BusLoop3D(XGame)/My project` (Unity 2022.3.62f3), uGUI, DOTween, service locator.
+- Còn mở: URP hay Built-in, git cho project Unity, bộ sinh màn trong Unity.
+- Quy trình: bàn & chốt thiết kế trước, rồi mới code.
+- URP 14.0.11 đã cài vào `BusLoop3D(XGame)/My project`: tạo `Assets/BusLoop/Settings/Rendering/BusLoop_URP.asset` + `BusLoop_Renderer.asset` (HDR tắt, MSAA 4x), gán vào Graphics + 6/6 Quality. Script: `Assets/BusLoop/Editor/Setup/UrpSetup.cs` (menu BusLoop ▸ Setup ▸ Configure URP). Sao lưu manifest cũ: `Packages/manifest.backup-before-urp.json`.
+- Bổ sung kiến trúc §3.7 "Dữ liệu & tải dữ liệu" (góp ý của bạn): ILevelRepository, thứ tự Boot, luồng chọn màn, save có version; quy tắc chỉ Services được đọc/ghi file.
+- Kiến trúc: chuyển sang **cách B** — Core không biết JSON; thêm module Serialization (LevelJson, SaveJson, nâng cấp định dạng) dùng chung cho game/bộ sinh màn/test; Data chỉ lo lấy file ở đâu.
+
+## v3.6 — Cầu vượt gọn hơn (2026-11-05)
+- Cầu thấp & hẹp hơn (cao 0.62, rộng 0.56), dốc chỉ lấn nửa ô bên cạnh → không tràn ra ngoài; bỏ dầm dưới, cột mảnh.
+- Xe nhỏ lại: 3/6/9 chỗ = 0.62 / 0.72 / 0.84.
+- Xe trên cầu ngồi đúng mặt cầu, lan can thấp → không bị che. Xe dưới gầm hơi "thụp" 22% khi qua cầu → lọt gầm, không xuyên.
+- `index.html` → `?v=3.6`.
