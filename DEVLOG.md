@@ -129,3 +129,11 @@ Kiểm thử: 50/50 màn thắng khi chạy lời giải mẫu.
 - Xe trên cầu chạy theo vòm, ngẩng/chúi đầu theo độ dốc. Xe dưới gầm "thụp" vừa đủ theo cỡ xe để lọt dưới vòm.
 - Kiểm tra: ảnh chụp cận cảnh (chưa vẽ / xe trên cầu / xe dưới gầm) + 17/17 màn có cầu vẫn thắng.
 - `index.html` → `?v=3.7`.
+
+## v3.8 — Xe lọt gầm cầu bằng kích thước thật (2026-11-05)
+- Bỏ hiệu ứng "thụp/lún" khi xe chui dưới cầu. Thay bằng: vòm cao 0.68, dài 0.9 mỗi bên (lấn 0.4 ô); xe 3/6/9 chỗ = 0.56 / 0.64 / 0.70. Khoảng hở dưới vòm (mép xe): 0.16 / 0.09 / 0.03 — đều lọt gầm.
+- Sửa lỗi: kéo **1 ô** lên cầu thì đường + đầu đường (chấm, vòng) đã nằm trên mặt cầu (trước phải tới ô thứ 2).
+- Bàn chơi to hơn một chút trên màn hình (căn theo mép bàn, lề 4px mỗi bên).
+- Vệt đen nhọn trong ảnh của bạn: dựng lại cùng màn + cùng đường zíc-zắc nhưng không tái hiện được (nghi là con trỏ chuột lúc chụp).
+- Kiểm tra: ảnh cận cảnh (đầu đường trên cầu, xe trên cầu, xe dưới gầm, toàn bàn) + 50/50 màn thắng.
+- `index.html` → `?v=3.8`.

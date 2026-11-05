@@ -624,7 +624,7 @@ function fit() {
   camera.aspect = Wd / Ht; camera.clearViewOffset(); camera.updateProjectionMatrix();
   const top = $('toast').getBoundingClientRect().bottom - fr.top + 8;
   const bottom = $('dock').getBoundingClientRect().top - fr.top - 12;
-  const n = L.size, h = n / 2 + 0.45;
+  const n = L.size, h = n / 2 + 0.3;
   const pts = [];
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (const y of [0, 0.55]) pts.push(new THREE.Vector3(sx * h, y, sz * h));
   const elev = THREE.MathUtils.degToRad(66);
@@ -636,7 +636,7 @@ function fit() {
     return { w: x1 - x0, h: y1 - y0, cy: (y0 + y1) / 2 };
   };
   let lo = 2, hi = 80;
-  for (let i = 0; i < 30; i++) { const mid = (lo + hi) / 2, m = measure(mid); if (m.w <= Wd - 12 && m.h <= bottom - top) hi = mid; else lo = mid; }
+  for (let i = 0; i < 30; i++) { const mid = (lo + hi) / 2, m = measure(mid); if (m.w <= Wd - 8 && m.h <= bottom - top) hi = mid; else lo = mid; }
   const m = measure(hi);
   const shift = (top + bottom) / 2 - m.cy;
   camera.setViewOffset(Wd, Ht, 0, -shift, Wd, Ht);
@@ -749,7 +749,7 @@ function buildWorld() {
 
 /* ---------- overpass: z-direction drives over the bridge, x-direction passes underneath ---------- */
 // Arched (hump-back) bridge along z. Height profile: flat-ish top, gentle feet.
-const ARCH_H = 0.58, ARCH_S = 0.85;            // peak height, half-length (cell half = 0.5 → reaches 0.35 into neighbours)
+const ARCH_H = 0.68, ARCH_S = 0.9;             // peak height, half-length (cell half = 0.5 → reaches 0.4 into neighbours)
 function archY(d) {
   if (d >= ARCH_S) return 0;
   return ARCH_H * (0.5 + 0.5 * Math.cos(Math.PI * Math.pow(d / ARCH_S, 1.6)));
@@ -981,7 +981,7 @@ function busModel(colorName, cap) {
   }
   const badge = makeBadge(`0/${cap * perUnit()}`, '#ffffff', hex(colorName)); badge.position.set(0, 1.08, 0); badge.scale.set(0.42, 0.42, 1); g.add(badge);
   g.userData = { body, wheels, slots, per, squash: 0, badge, heading: 0, lean: 0, pitch: 0, shake: 0, hop: 0 };
-  const bs = cap <= 1 ? 0.62 : cap === 2 ? 0.72 : 0.84;
+  const bs = cap <= 1 ? 0.56 : cap === 2 ? 0.64 : 0.70;
   g.userData.baseScale = bs; g.scale.setScalar(bs);
   return g;
 }
@@ -1105,8 +1105,10 @@ let tipMarks = [];
 function bridgeLift(route) {
   const overs = [];
   route.forEach((p, k) => {
-    if (!isCross(L, p) || k === 0 || k === route.length - 1) return;
-    if (route[k - 1][0] === p[0] && route[k + 1][0] === p[0]) overs.push(W(p));
+    if (!isCross(L, p) || k === 0) return;
+    const inAlongZ = route[k - 1][0] === p[0];
+    const outAlongZ = k === route.length - 1 || route[k + 1][0] === p[0];
+    if (inAlongZ && outAlongZ) overs.push(W(p));
   });
   if (!overs.length) return null;
   return pt => { let m = 0; for (const o of overs) if (Math.abs(pt.x - o.x) < 0.42) m = Math.max(m, archY(Math.abs(pt.z - o.z))); return m; };
@@ -1126,13 +1128,15 @@ function rebuildRoutes() {
     const yo = i * 0.0025, lift = bridgeLift(r);
     for (const pc of pieces(pl)) {
       if (pc.pts.length > 1) { ribbon(pc, 0.74, 0.026 + yo, edge, 0, lift); ribbon(pc, 0.58, 0.032 + yo, road, 0, lift); ribbon(pc, 0.24, 0.038 + yo, roadMat('chev', col), 0.36, lift); }
-      cap(pc.pts[0], 0.37, 0.026 + yo, edge); cap(pc.pts.at(-1), 0.37, 0.026 + yo, edge);
-      cap(pc.pts[0], 0.29, 0.032 + yo, road); cap(pc.pts.at(-1), 0.29, 0.032 + yo, road);
+      const l0 = lift ? lift(pc.pts[0]) : 0, l1 = lift ? lift(pc.pts.at(-1)) : 0;
+      cap(pc.pts[0], 0.37, 0.026 + yo + l0, edge); cap(pc.pts.at(-1), 0.37, 0.026 + yo + l1, edge);
+      cap(pc.pts[0], 0.29, 0.032 + yo + l0, road); cap(pc.pts.at(-1), 0.29, 0.032 + yo + l1, road);
     }
     if (!routeDone(i)) {
       const tip = new THREE.Mesh(RING(0.18, 0.27), new THREE.MeshBasicMaterial({ color: col, transparent: true, depthWrite: false }));
-      const e = pl.pts.at(-1); tip.position.set(e.x, 0.05, e.z); root.add(tip); routeObjs.push(tip); tipMarks.push(tip);
-      const dot = mk(SPH(0.12, 16, 10), M(col, 0.3), root, e.x, 0.08, e.z); routeObjs.push(dot); tipMarks.push(dot);
+      const e = pl.pts.at(-1), le = lift ? lift(e) : 0;
+      tip.position.set(e.x, 0.05 + le, e.z); root.add(tip); routeObjs.push(tip); tipMarks.push(tip);
+      const dot = mk(SPH(0.12, 16, 10), M(col, 0.3), root, e.x, 0.08 + le, e.z); dot.userData.baseY = 0.09 + le; routeObjs.push(dot); tipMarks.push(dot);
     }
   });
 }
@@ -1707,13 +1711,7 @@ function updateRunners(dt) {
     const archPitch = Math.atan((tunnelY(r, r.dist + 0.04) - tunnelY(r, r.dist - 0.04)) / 0.08);   // nose up climbing, down descending
     u.body.rotation.z = u.lean; u.body.rotation.x = u.pitch + archPitch;
     bus.position.y = tunnelY(r) + Math.sin(r.dist * 10) * 0.005 * (r.v / VMAX);
-    let under = 0;
-    if (bus.position.y < 0.05) for (const c of L.cross) {
-      const w = W(c); if (Math.abs(p.z - w.z) > 0.3) continue;
-      under = Math.max(under, easeInOut(clamp((0.75 - Math.abs(p.x - w.x)) / 0.3, 0, 1)));
-    }
-    const fit = Math.min(1, 0.42 / (0.733 * u.baseScale));
-    bus.scale.set(u.baseScale, u.baseScale * (1 - (1 - fit) * under), u.baseScale);
+    bus.scale.setScalar(u.baseScale);
     u.wheels.forEach(wh => wh.rotation.x -= step / 0.15);
     r.puff -= dt;
     if (r.puff <= 0 && r.v > 0.6 && bus.position.y > -0.05) { r.puff = 0.14; bus.updateMatrixWorld(); puff(new THREE.Vector3(-0.26, 0.2, 0.72).applyMatrix4(bus.matrixWorld)); }
@@ -1830,7 +1828,7 @@ function update(dt) {
     }
   });
   // tip markers pulse
-  tipMarks.forEach((m, k) => { if (m.geometry.type === 'RingGeometry') m.scale.setScalar(1 + 0.25 * Math.sin(T * 8)); else m.position.y = 0.09 + Math.abs(Math.sin(T * 6)) * 0.06; });
+  tipMarks.forEach((m, k) => { if (m.geometry.type === 'RingGeometry') m.scale.setScalar(1 + 0.25 * Math.sin(T * 8)); else m.position.y = (m.userData.baseY || 0.09) + Math.abs(Math.sin(T * 6)) * 0.06; });
   chevronTex.offset.x -= dt * (mode === 'run' ? 2.2 : 1.1);
 
   if (mode === 'run') updateRunners(sdt);
