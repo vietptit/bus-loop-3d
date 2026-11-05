@@ -96,3 +96,8 @@ Kiểm thử: 50/50 màn thắng khi chạy lời giải mẫu.
 ## v3.3 — Ảnh nền Home sạch (2026-11-05)
 - Thay `assets/home_bg.webp` bằng tranh mới của bạn (572×1024, không có nút vẽ sẵn); cắt viền khung bằng `102.6% 101.6%`.
 - `index.html` → `?v=3.3`.
+
+## v3.4 — UI theo mockup (2026-11-05)
+- Icon (xu, tim, bánh răng, cửa hàng 24H, nhà, bản đồ) cắt từ mockup của bạn `assets/ui_mock.webp` (nhúng 1 lần, dùng kiểu sprite: class `.ico .ico-coin` ...; toạ độ trong CSS).
+- Khung xanh bóng viền xanh đậm `#12306b`, nút CHƠI to viền đậm, tab đang chọn sáng hơn.
+- `index.html` → `?v=3.4`.
