@@ -6,6 +6,15 @@ Link chơi: https://vietptit.github.io/bus-loop-3d/ · Repo: https://github.com/
 
 ---
 
+## v3.1 — Hiệu ứng UI (2026-11-05)
+- Bản vá do **Codex (medium, chế độ chỉ đọc)** viết, Claude duyệt + áp: `tools/patch_ui_polish.json`.
+  - Home mờ dần/trượt khi vào–ra; popup (kết quả, chọn màn, cài đặt, cửa hàng) bật nảy.
+  - Nút CHƠI nhấp nhô; mọi nút bóp nhẹ khi bấm; icon thanh điều hướng lắc khi chạm.
+  - Nút trong bảng chọn màn bật ra lần lượt; vệt sáng lướt qua ô xu.
+  - Tôn trọng chế độ "giảm chuyển động" của máy.
+- Claude sửa thêm: cờ ẩn HUD (`at-home`) đổi ngay khi ẩn/hiện Home (trước đó HUD bị ẩn tới khung hình sau).
+- Không dùng Gemini web: cần đăng nhập + thao tác tay, tốn công; nền CSS hiện tại đủ đẹp và nhẹ.
+
 ## v3 — Game hoàn chỉnh (2026-11-05)
 
 **Giao diện (tham khảo phong cách Snacky Dash, vẽ lại bằng CSS — không chép ảnh của project đó)**

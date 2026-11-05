@@ -197,6 +197,36 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
   background: linear-gradient(180deg, #7ff05c 0%, #24b33a 100%); white-space: nowrap; }
 .buy:disabled { filter: grayscale(.8); opacity: .7; }
 .reward { display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 30px; font-weight: 700; color: #ffd84a; text-shadow: 0 3px 0 var(--line); }
+/* Small motion polish; keep home mounted so hidden can transition. */
+.home { opacity: 1; transform: translateY(0); visibility: visible; transition: opacity .24s ease, transform .24s ease, visibility 0s; }
+.home.hidden { display: flex; opacity: 0; transform: translateY(14px); visibility: hidden; pointer-events: none; transition-delay: 0s, 0s, .24s; }
+
+.modal .card { animation: none; }
+:is(#modal, #lsel, #settings, #shop):not(.hidden) > .card { animation: toyPop .36s ease-out; }
+@keyframes toyPop {
+  0% { opacity: 0; transform: translateY(10px) scale(.88); }
+  65% { opacity: 1; transform: translateY(-2px) scale(1.035); }
+  100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.homeplay { animation: homeBob 2.4s ease-in-out infinite; }
+@keyframes homeBob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+button:active:not(:disabled) { animation: none !important; transform: translateY(3px) scale(1.03, .92) !important; }
+.nav button.on:active:not(:disabled) { transform: translateY(-3px) scale(1.03, .92) !important; }
+.nav button:active i { animation: navWiggle .28s ease-in-out; }
+@keyframes navWiggle { 0%, 100% { transform: rotate(0); } 30% { transform: rotate(-12deg); } 70% { transform: rotate(10deg); } }
+
+#lsel:not(.hidden) .lv { animation: toyPop .3s ease-out backwards; animation-delay: calc(min(var(--i, 0), 12) * 25ms); }
+
+.pill { position: relative; }
+.pill::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(110deg, transparent 42%, rgba(255,255,255,.45) 50%, transparent 58%) 160% 0 / 250% 100% no-repeat; animation: coinShine 4.8s ease-in-out infinite; }
+@keyframes coinShine { 0%, 78% { background-position: 160% 0; } 100% { background-position: -160% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .shell, .shell *, .shell *::before, .shell *::after { animation: none !important; transition: none !important; }
+  .home.hidden { transform: none; }
+  .pill::after { content: none; }
+}
 </style>
 <script type="importmap">
 { "imports": {
@@ -524,7 +554,7 @@ function init() {
   window.addEventListener('resize', fit);
   reset(lvl);
   $('loading').classList.add('hidden');
-  $('home').classList.remove('hidden'); refreshUI();
+  $('home').classList.remove('hidden'); $('frame').classList.add('at-home'); refreshUI();
   requestAnimationFrame(tick);
 }
 
@@ -1370,7 +1400,7 @@ function goHome() {
   clearTimeout(autoT); autoT = null;
   if (mode !== 'draw' || demoQ) reset(lvl);
   $('modal').classList.add('hidden'); $('lsel').classList.add('hidden');
-  $('home').classList.remove('hidden'); refreshUI();
+  $('home').classList.remove('hidden'); $('frame').classList.add('at-home'); refreshUI();
 }
 const SHOP = [
   { ic: '💡', nm: 'Gợi ý x3', sub: 'Hiện đường đi mẫu', price: 90 },
@@ -1405,9 +1435,9 @@ function openLevels() {
     const ms = MECHS.filter(m => m.has(q)), intro = MECHS.some(m => firstSeen[m.key] === i);
     const cls = ['lv', 'panel', ms.length ? 'mech' : '', intro ? 'intro' : '', i === lvl ? 'cur' : ''].join(' ');
     const tip = ms.map(m => m.name).join(', ') || 'Cơ bản';
-    return `<button class="${cls}" data-l="${i}" title="${tip}">${i + 1}<small>${ms.map(m => m.icon).join('')}</small>${intro ? '<span class="new">MỚI</span>' : ''}</button>`;
+    return `<button class="${cls}" style="--i:${i}" data-l="${i}" title="${tip}">${i + 1}<small>${ms.map(m => m.icon).join('')}</small>${intro ? '<span class="new">MỚI</span>' : ''}</button>`;
   }).join('');
-  $('lgrid').querySelectorAll('button').forEach(b => b.onclick = () => { audio(); $('lsel').classList.add('hidden'); $('home').classList.add('hidden'); reset(+b.dataset.l); });
+  $('lgrid').querySelectorAll('button').forEach(b => b.onclick = () => { audio(); $('lsel').classList.add('hidden'); $('home').classList.add('hidden'); $('frame').classList.remove('at-home'); reset(+b.dataset.l); });
   $('lsel').classList.remove('hidden');
   const cur = $('lgrid').querySelector('.cur'); if (cur) cur.scrollIntoView({ block: 'center' });
 }
@@ -1469,7 +1499,7 @@ function bindEvents() {
   $('setHome').onclick = () => { $('settings').classList.add('hidden'); goHome(); };
   $('setReset').onclick = () => { coins = 120; store.set('bl_coins', coins); $('settings').classList.add('hidden'); reset(0); goHome(); toast('Đã xoá tiến độ', 'good'); };
   $('homeBtn').onclick = () => { audio(); goHome(); };
-  $('homePlay').onclick = () => { audio(); SFX.go(); $('home').classList.add('hidden'); reset(lvl); };
+  $('homePlay').onclick = () => { audio(); SFX.go(); $('home').classList.add('hidden'); $('frame').classList.remove('at-home'); reset(lvl); };
   $('navLevels').onclick = () => { audio(); openLevels(); };
   $('navShop').onclick = () => { audio(); openShop(); };
   $('shopClose').onclick = () => $('shop').classList.add('hidden');
