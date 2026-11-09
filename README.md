@@ -13,7 +13,7 @@ Game giải đố vẽ đường cho xe buýt, chơi trực tiếp trên trình 
 ## Cơ chế
 | Từ màn | Cơ chế |
 |---|---|
-| 9 | Xe sức chứa khác nhau (số trên xe) |
+| 12 | Xe sức chứa khác nhau (số trên xe) |
 | 15 | Trạm có màu – chỉ nhận khách cùng màu |
 | 25 | Đường hầm – 2 xe đi chung ô, phải đi thẳng |
 | 33 | Ống dịch chuyển – vẽ vào ống để sang ống cùng màu |
