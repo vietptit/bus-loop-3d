@@ -118,7 +118,10 @@ canvas { display: block; width: 100%; height: 100%; touch-action: none; }
 
 /* ===== v3 theme ===== */
 :root { --ink: #173b7a; --line: #13306b; --cream: #fffbea; --purple1: #47c6ff; --purple2: #1a7cf2; }
-.shell { background: linear-gradient(180deg, #5fd3ff 0%, #a8ecff 45%, #fff3b0 100%) !important; }
+.shell { background: linear-gradient(180deg, #5fd3ff 0%, #a8ecff 45%, #fff3b0 100%); }
+.shell.sky { animation: cloudDrift 90s linear infinite; }
+@keyframes cloudDrift { from { background-position: 0 14%, 0 34%, 0 0; } to { background-position: 720px 14%, -480px 34%, 0 0; } }
+@media (prefers-reduced-motion: reduce) { .shell.sky { animation: none; } }
 .panel { background: linear-gradient(180deg, var(--purple1) 0%, var(--purple2) 100%); border: 3px solid var(--line); color: #fff;
   box-shadow: inset 0 3px 0 rgba(255,255,255,.35), inset 0 -4px 0 rgba(30,0,80,.35), 0 3px 0 var(--line); }
 .pill.panel, .cnt.panel, .toast.panel { color: #fff; text-shadow: 0 2px 0 var(--line); }
@@ -410,44 +413,40 @@ const COLORS = {
   purple: 0xa452ff, pink: 0xff5cae, orange: 0xff8a1a, teal: 0x14c8c0
 };
 const hex = c => '#' + COLORS[c].toString(16).padStart(6, '0');
+/* Each world uses ONE hue family: light/dark tiles of the same colour, a grass/sand/snow lip,
+   and a layered earth cliff under the floating island. Buses, people and flags keep their vivid colours. */
 const THEMES = {
   city: {
-    bg: 'linear-gradient(180deg, #5fd3ff 0%, #a8ecff 45%, #fff3b0 100%)',
-    plateau: 0xfff3e2, tileA: 0xfff0dc, tileB: 0xf7dfc0, rim: 0xe0a98a,
-    block: 0xc7a184, blockTop: 0xdcbb9c,
-    hemiSky: 0xffffff, hemiGround: 0xffe2d2, hemiIntensity: 1.15,
-    sunColor: 0xfff4e6, sunIntensity: 1.7, name: 'Thành phố', icon: '🏙️'
+    sky: ['#8fd8ff', '#c4ecff', '#eaf8ff'],
+    tileA: 0xeef7e6, tileB: 0xdcefd0, grass: 0x8fd17a, grassTop: 0xa7de8f, cliff: [0xd2a57a, 0xbb8d64, 0xa27650],
+    hemiSky: 0xffffff, hemiGround: 0xdfeedd, hemiIntensity: 1.15, sunColor: 0xfff6ea, sunIntensity: 1.6, name: 'Thành phố', icon: '🏙️'
   },
   beach: {
-    bg: 'linear-gradient(180deg, #65ddff 0%, #b8f5f2 48%, #fff0b0 100%)',
-    plateau: 0xffe5a0, tileA: 0xffefbf, tileB: 0xffdfa1, rim: 0xe5b96d,
-    block: 0xecc77f, blockTop: 0xffe5a0,
-    hemiSky: 0xc6f5ff, hemiGround: 0xffe8ad, hemiIntensity: 1.2,
-    sunColor: 0xfff6d8, sunIntensity: 1.65, name: 'Bãi biển', icon: '🏖️'
+    sky: ['#6fdcff', '#b9f1f4', '#fff5d6'],
+    tileA: 0xfff6dc, tileB: 0xffeac2, grass: 0xf3d08a, grassTop: 0xffe1a3, cliff: [0xe2b57f, 0xcf9e6a, 0xb98857],
+    hemiSky: 0xd8f7ff, hemiGround: 0xffeccc, hemiIntensity: 1.2, sunColor: 0xfff6dc, sunIntensity: 1.6, name: 'Bãi biển', icon: '🏖️'
   },
   forest: {
-    bg: 'linear-gradient(180deg, #7ae6cc 0%, #c9f5ae 48%, #fff2bc 100%)',
-    plateau: 0xb3d78b, tileA: 0xe5efbd, tileB: 0xcbe4a0, rim: 0x709f69,
-    block: 0x6d9b56, blockTop: 0x8dba67,
-    hemiSky: 0xe0fff2, hemiGround: 0xb7d39b, hemiIntensity: 1.2,
-    sunColor: 0xfff2ce, sunIntensity: 1.65, name: 'Rừng xanh', icon: '🌲'
+    sky: ['#7fdcc4', '#c3f0d6', '#f2fbe4'],
+    tileA: 0xe6f2d4, tileB: 0xd3e8bd, grass: 0x6fb85a, grassTop: 0x86c96b, cliff: [0xa07a56, 0x8a6849, 0x73563d],
+    hemiSky: 0xe8fff2, hemiGround: 0xcfe3bb, hemiIntensity: 1.2, sunColor: 0xfff3d6, sunIntensity: 1.55, name: 'Rừng xanh', icon: '🌲'
   },
   snow: {
-    bg: 'linear-gradient(180deg, #8edbff 0%, #d8f6ff 48%, #fff0fa 100%)',
-    plateau: 0xe2f4ff, tileA: 0xf4fcff, tileB: 0xcfe9ff, rim: 0x91bada,
-    block: 0x8ecde9, blockTop: 0xc4efff,
-    hemiSky: 0xe6f7ff, hemiGround: 0xcbdafa, hemiIntensity: 1.25,
-    sunColor: 0xf5fbff, sunIntensity: 1.5, name: 'Xứ tuyết', icon: '❄️'
+    sky: ['#9fd6ff', '#d6efff', '#f6fbff'],
+    tileA: 0xf6fbff, tileB: 0xe2eff9, grass: 0xf4faff, grassTop: 0xffffff, cliff: [0xaec6da, 0x97b1c8, 0x809bb3],
+    hemiSky: 0xeef8ff, hemiGround: 0xd8e6f6, hemiIntensity: 1.25, sunColor: 0xf7fbff, sunIntensity: 1.45, name: 'Xứ tuyết', icon: '❄️'
   },
   sunset: {
-    bg: 'linear-gradient(180deg, #b89aff 0%, #f7b4da 48%, #ffd48f 100%)',
-    plateau: 0xffd7bd, tileA: 0xffe8d1, tileB: 0xf7cfbe, rim: 0xd495ae,
-    block: 0xc29bbd, blockTop: 0xe4bbd3,
-    hemiSky: 0xe8caff, hemiGround: 0xffd0ac, hemiIntensity: 1.2,
-    sunColor: 0xffd29b, sunIntensity: 1.55, name: 'Hoàng hôn', icon: '🌇'
+    sky: ['#b49cff', '#f2b6d6', '#ffd9a6'],
+    tileA: 0xffeadf, tileB: 0xf9d8ca, grass: 0xeea98c, grassTop: 0xf7bea3, cliff: [0xb98a9c, 0x9f748a, 0x866075],
+    hemiSky: 0xf0d6ff, hemiGround: 0xffd8bf, hemiIntensity: 1.2, sunColor: 0xffd9a8, sunIntensity: 1.5, name: 'Hoàng hôn', icon: '🌇'
   }
 };
+for (const t of Object.values(THEMES)) t.bg = `linear-gradient(180deg, ${t.sky[0]} 0%, ${t.sky[1]} 55%, ${t.sky[2]} 100%)`;
 THEMES.clean = THEMES.city;
+const cloudSvg = (w, h, puffs, op) => `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'><g fill='white' fill-opacity='${op}'>${puffs.map(([x, y, r]) => `<circle cx='${x}' cy='${y}' r='${r}'/>`).join('')}</g></svg>`)}")`;
+const CLOUDS_A = cloudSvg(720, 90, [[60, 60, 22], [88, 48, 30], [124, 58, 24], [96, 68, 20], [400, 50, 18], [424, 40, 26], [456, 52, 20]], 0.75);
+const CLOUDS_B = cloudSvg(480, 70, [[90, 44, 16], [112, 34, 22], [138, 44, 16], [320, 40, 14], [338, 32, 19], [360, 42, 13]], 0.55);
 const WORLD_THEMES = ['city', 'beach', 'forest', 'snow', 'sunset'];
 
 /* =========================================================
@@ -586,7 +585,7 @@ const TOON_GRAD = (() => { const d = new Uint8Array([150, 205, 255]); const tx =
 function outlineOf(color) { const c = new THREE.Color(color).multiplyScalar(0.42); c.offsetHSL(0, 0.1, -0.02); return [c.r, c.g, c.b]; }
 function MT(color, outline = true) {
   const m = new THREE.MeshToonMaterial({ color, gradientMap: TOON_GRAD });
-  if (outline) m.userData.outlineParameters = { thickness: 0.0042, color: outlineOf(color), alpha: 1, visible: true };
+  if (outline) m.userData.outlineParameters = { thickness: 0.0032, color: outlineOf(color), alpha: 1, visible: true };
   return m;
 }
 function M(color, rough = 0.5, flat = false, outline = true) {
@@ -755,14 +754,14 @@ function init() {
   camera = new THREE.PerspectiveCamera(30, 1, 0.5, 200);
   raycaster = new THREE.Raycaster();
 
-  effect = new OutlineEffect(renderer, { defaultThickness: 0.003, defaultColor: [0, 0, 0], defaultAlpha: 0 });
+  effect = new OutlineEffect(renderer, { defaultThickness: 0.0022, defaultColor: [0, 0, 0], defaultAlpha: 0 });
   hemi = new THREE.HemisphereLight(0xffffff, 0xffe2d2, 1.15);
   scene.add(hemi);
   sun = new THREE.DirectionalLight(0xfff4e6, 1.7);
   sun.position.set(-4, 12, 6);
   sun.castShadow = true;
   sun.shadow.mapSize.set(phone ? 1024 : 2048, phone ? 1024 : 2048);
-  sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02; sun.shadow.radius = 3;
+  sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02; sun.shadow.radius = 5;
   scene.add(sun); scene.add(sun.target);
 
   root = new THREE.Group(); scene.add(root);
@@ -797,7 +796,8 @@ function fit() {
   const n = L.size, h = n / 2 + 0.3;
   const pts = [];
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (const y of [0, 0.55]) pts.push(new THREE.Vector3(sx * h, y, sz * h));
-  const elev = THREE.MathUtils.degToRad(66);
+  for (const sx of [-1, 1]) pts.push(new THREE.Vector3(sx * h, -1.1, h));   // keep the front cliff in view
+  const elev = THREE.MathUtils.degToRad(60);
   const dir = new THREE.Vector3(0, Math.sin(elev), Math.cos(elev));
   const measure = d => {
     camera.position.copy(dir).multiplyScalar(d); camera.lookAt(0, 0, 0); camera.updateMatrixWorld(); camera.updateProjectionMatrix();
@@ -811,6 +811,7 @@ function fit() {
   const shift = (top + bottom) / 2 - m.cy;
   camera.setViewOffset(Wd, Ht, 0, -shift, Wd, Ht);
   camera.updateProjectionMatrix();
+  camBase = camera.position.clone(); winCam = null;
   const s = n / 2 + 4;
   Object.assign(sun.shadow.camera, { left: -s, right: s, top: s, bottom: -s, near: 1, far: 40 });
   sun.shadow.camera.updateProjectionMatrix();
@@ -880,7 +881,8 @@ function reset(i = lvl) {
   theme = WORLD_THEMES[Math.floor(lvl / 10) % 5];
   store.set('bl_lvl', lvl);
   const palette = THEMES[theme];
-  $('frame').style.background = palette.bg;
+  $('frame').style.background = `${CLOUDS_A} 0 14% / 720px auto repeat-x, ${CLOUDS_B} 0 34% / 480px auto repeat-x, ${palette.bg}`;
+  $('frame').classList.add('sky');
   hemi.color.setHex(palette.hemiSky); hemi.groundColor.setHex(palette.hemiGround);
   hemi.intensity = palette.hemiIntensity;
   sun.color.setHex(palette.sunColor); sun.intensity = palette.sunIntensity;
@@ -903,6 +905,38 @@ function reset(i = lvl) {
   root.userData.intro = 1;
 }
 
+/* ---------- floating island: grass lip, layered earth cliff, hanging rocks, little floating rocks ---------- */
+function buildIsland(n, T) {
+  const R = rng(lvl * 977 + 13);
+  mk(RB(n + 0.62, 0.16, n + 0.62, 0.2), M(T.grassTop, 0.8), root, 0, -0.085, 0);            // grass / sand / snow lip
+  mk(RB(n + 0.56, 0.2, n + 0.56, 0.18), M(T.grass, 0.8), root, 0, -0.24, 0);
+  const layers = [[n + 0.6, -0.56, 0.5, 0], [n + 0.3, -0.98, 0.4, 1], [n - 0.6, -1.3, 0.3, 2], [Math.max(1, n - 2), -1.54, 0.24, 2]];
+  for (const [sz, y, h, c] of layers) {
+    mk(RB(sz, h, sz, Math.min(0.2, sz / 4)), M(T.cliff[c], 0.9), root, 0, y, 0);
+    // jagged rocks poking out of every layer edge
+    const per = Math.max(3, Math.round(sz * 1.3));
+    for (let side = 0; side < 4; side++) for (let k = 0; k < per; k++) {
+      const t = (k + 0.5) / per - 0.5 + (R() - 0.5) * 0.12, e = sz / 2 + 0.02;
+      const x = side < 2 ? t * sz : (side === 2 ? -e : e), z = side < 2 ? (side === 0 ? -e : e) : t * sz;
+      const r = 0.1 + R() * 0.1, m = mk(DOD(r), M(T.cliff[Math.min(2, c + (R() < 0.4 ? 1 : 0))], 0.9), root, x, y - h * 0.1 + (R() - 0.5) * 0.1, z);
+      m.rotation.set(R() * 3, R() * 3, R() * 3); m.scale.y = 0.8 + R() * 0.5;
+    }
+  }
+  // stalactite tip under the island
+  const tipC = M(T.cliff[2], 0.9);
+  for (let k = 0; k < 5; k++) {
+    const a = k / 5 * Math.PI * 2 + R(), d = k ? 0.35 + R() * 0.35 : 0, len = k ? 0.35 + R() * 0.3 : 0.75;
+    mk(CYL(k ? 0.16 : 0.32, 0.001, len, 7), tipC, root, Math.cos(a) * d, -1.64 - len / 2, Math.sin(a) * d);
+  }
+  // small floating rocks around the island
+  for (let k = 0; k < 4; k++) {
+    const g = new THREE.Group(), a = k * Math.PI / 2 + 0.6 + R() * 0.5, d = n / 2 + 0.9 + R() * 0.4;
+    g.position.set(Math.cos(a) * d, -0.55 - R() * 0.5, Math.sin(a) * d); root.add(g);
+    mk(RB(0.34, 0.08, 0.34, 0.06), M(T.grass, 0.8), g, 0, 0.04, 0);
+    mk(CYL(0.17, 0.001, 0.32, 6), M(T.cliff[1], 0.9), g, 0, -0.16, 0);
+    ambient.push({ type: 'float', obj: g, y: g.position.y, phase: R() * 6 });
+  }
+}
 /* ---------- board (minimal, clean) ---------- */
 function softShadowTex() {
   const c = document.createElement('canvas'); c.width = c.height = 128;
@@ -913,10 +947,7 @@ function softShadowTex() {
 }
 function buildWorld() {
   const n = L.size, T = THEMES[theme];
-  const sh = mk(new THREE.PlaneGeometry(n + 3.4, n + 3.4), new THREE.MeshBasicMaterial({ map: softShadowTex(), transparent: true, depthWrite: false }), root, 0.3, -0.5, 0.55, false);
-  sh.rotation.x = -Math.PI / 2;
-  mk(RB(n + 0.62, 0.22, n + 0.62, 0.26), M(T.rim, 0.7), root, 0, -0.3, 0);
-  mk(RB(n + 0.5, 0.36, n + 0.5, 0.22), M(T.plateau, 0.6), root, 0, -0.18, 0);
+  buildIsland(n, T);
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
     const w = W([x, y]);
     mk(RB(0.9, 0.04, 0.9, 0.12), M((x + y) % 2 ? T.tileB : T.tileA, 0.8, false, false), root, w.x, 0, w.z, false);
@@ -932,6 +963,7 @@ function buildWorld() {
     const snow = theme === 'snow', count = snow ? 40 : 16, bound = n / 2 - 0.24;
     for (let i = 0; i < count; i++) {
       const mat = new THREE.MeshBasicMaterial({ color: snow ? 0xffffff : 0xffdc73, transparent: true, opacity: snow ? 0.9 : 0.7, depthWrite: false });
+      mat.userData.outlineParameters = { visible: false };   // outline would turn tiny flakes into black dots
       const x = (Math.random() * 2 - 1) * bound, z = (Math.random() * 2 - 1) * bound;
       const y = snow ? 0.12 + Math.random() * 2.6 : 0.5 + Math.random() * 1.3;
       const obj = mk(SPH(snow ? 0.022 : 0.028, 6, 4), mat, root, x, y, z, false);
@@ -1084,7 +1116,7 @@ function natureRocks(g, N, x, z, s) {
   if (N.snowy) { const cap = mk(SPH(0.12, 12, 8), M(0xffffff, 0.5), r, -0.01, 0.17, 0); cap.scale.set(1.2, 0.35, 1.1); }
 }
 function createBlock(p) {
-  const N = NATURE[theme] || NATURE.city, g = new THREE.Group(); g.position.copy(W(p)); root.add(g);
+  const N = { ...(NATURE[theme] || NATURE.city), ground: THEMES[theme].grassTop, side: THEMES[theme].cliff[0] }, g = new THREE.Group(); g.position.copy(W(p)); root.add(g);
   mk(RB(0.86, 0.1, 0.86, 0.1), M(N.side, 0.8), g, 0, 0.05, 0);                 // soil
   mk(RB(0.8, 0.04, 0.8, 0.1), M(N.ground, 0.8), g, 0, 0.1, 0, false);          // grass / sand / snow top
   const v = ((p[0] * 7 + p[1] * 13) % 3 + 3) % 3, flip = (p[0] + p[1]) % 2 ? 1 : -1;
@@ -1812,15 +1844,42 @@ function complete() {
   if (won) {
     const stars = 3;
     coins += 30; store.set('bl_coins', coins);
-    SFX.win(); confettiDom(); buzz([20, 60, 20]);
+    SFX.win(); buzz([20, 60, 20]);
     stationVis.forEach((st, k) => later(() => bubble(st.g.position.clone().setY(1.15), '🥳'), 120 * k));
-    later(() => showModal(true, stars), 700);
+    winShow();
+    later(() => showModal(true, stars), 2700);
   } else {
     pickVis.forEach(v => { if (v.remain > 0) { v.shake = 1.5; floatLabel(v.g.position.clone().setY(1.1), '!', '#ff3b3b'); bubble(v.g.position.clone().setY(0.95), '😢'); } });
     runners.forEach(r => { if (r.failed) bubble(busVis[r.i].position.clone().setY(1.25), '😵'); });
     SFX.lose(); buzz(80);
     later(() => showModal(false, 0), 1100);
   }
+}
+/* Victory sequence (~2.7s): every road lights up from bus to exit, fireworks pop over the island,
+   the island bounces and the camera slowly pulls back and orbits; then the result panel appears. */
+let winCam = null, camBase = null;
+function winShow() {
+  paths.forEach((r, i) => {
+    if (r.length < 2) return;
+    const pl = polyline(r), col = COLORS[L.buses[i].color];
+    later(() => fx.push({ kind: 'sweep', obj: mk(SPH(0.11, 12, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }), root, 0, -5, 0, false), pl, lift: bridgeLift(r), d: 0, col, trail: 0, life: 99, max: 99 }), i * 180);
+  });
+  for (let k = 0; k < 6; k++) later(() => {
+    const h = L.size / 2 - 0.6, c = Object.values(COLORS)[(k * 3) % 8];
+    firework(new THREE.Vector3((Math.random() * 2 - 1) * h, 1.6 + Math.random() * 1.2, (Math.random() * 2 - 1) * h), c);
+  }, 500 + k * 260);
+  later(() => { root.userData.bounce = 1; confettiDom(); }, 350);
+  winCam = { t: 0 };
+}
+function firework(pos, color) {
+  for (let i = 0; i < 22; i++) {
+    const m = new THREE.Mesh(G('oct', () => new THREE.OctahedronGeometry(0.06)), new THREE.MeshBasicMaterial({ color: i % 4 ? color : 0xffffff, transparent: true }));
+    m.position.copy(pos); root.add(m);
+    const u = Math.random() * 2 - 1, a = Math.random() * Math.PI * 2, sp = 1.8 + Math.random() * 0.8, q = Math.sqrt(1 - u * u);
+    fx.push({ kind: 'spark', obj: m, life: 0.9, max: 0.9, vel: new THREE.Vector3(Math.cos(a) * q * sp, u * sp + 0.6, Math.sin(a) * q * sp) });
+  }
+  ringFx(pos, color, 2.2, 0.5);
+  noise(0.25, 0.09, 900, 0, null, 0.7, 200); tone(300 + Math.random() * 300, 0.3, 'triangle', 0.05, 1200);
 }
 function showModal(won, stars) {
   $('modal').classList.remove('hidden');
@@ -1843,6 +1902,13 @@ function showModal(won, stars) {
 /* =========================================================
    SHELL: home / shop
    ========================================================= */
+/* next level: old island drifts off to the left, the new one floats in from the right */
+function islandSwap(fn) {
+  if (root.userData.leave > 0) return;
+  $('modal').classList.add('hidden'); SFX.whoosh();
+  root.userData.leave = 1; root.userData.bounce = 0;
+  setTimeout(() => { fn(); root.userData.side = true; root.userData.intro = 1; root.position.set(9, 0, 0); root.scale.setScalar(1); }, 500);
+}
 let transitioning = false;
 function transitionTo(fn) {
   if (transitioning) { fn(); return; }
@@ -1983,7 +2049,7 @@ function bindEvents() {
     if (!allDone()) { const i = paths.findIndex((_, j) => !routeDone(j)); sel = i; busVis[i].userData.hop = 1; toast(`Xe ${L.buses[i].id} chưa tới cổng đích 🚩`, 'bad'); SFX.bad(); return; }
     startRun();
   };
-  $('mNext').onclick = () => { audio(); transitionTo(() => reset(lvl + 1)); };
+  $('mNext').onclick = () => { audio(); islandSwap(() => reset(lvl + 1)); };
   $('mRetry').onclick = () => { audio(); reset(lvl); };
   window.addEventListener('keydown', e => { if (e.key === 'ArrowRight') reset(lvl + 1); if (e.key === 'ArrowLeft') reset(lvl - 1); });
 }
@@ -2151,10 +2217,23 @@ function tick() {
 }
 function update(dt) {
   T += dt;
-  if (root.userData.intro > 0) {
-    const k = root.userData.intro = Math.max(0, root.userData.intro - dt / 0.45);
-    root.position.y = 0.8 * k * k;
-    root.scale.setScalar(k ? 1 + 0.14 * (1.70158 * k * k - 2.70158 * k * k * k) : 1);
+  const ud = root.userData;
+  if (ud.leave > 0) {                                   // old island drifts away to the left
+    ud.leave = Math.max(0, ud.leave - dt / 0.5); const k = 1 - ud.leave;
+    root.position.set(-9 * k * k, 0.6 * k, 0); root.scale.setScalar(1 - 0.25 * k);
+  } else if (ud.intro > 0) {
+    const k = ud.intro = Math.max(0, ud.intro - dt / (ud.side ? 0.6 : 0.45));
+    if (ud.side) { root.position.set(9 * k * k * k, 0, 0); root.scale.setScalar(k ? 1 + 0.1 * (1.70158 * k * k - 2.70158 * k * k * k) : 1); }
+    else { root.position.set(0, 0.8 * k * k, 0); root.scale.setScalar(k ? 1 + 0.14 * (1.70158 * k * k - 2.70158 * k * k * k) : 1); }
+    if (!k) { ud.side = false; root.position.set(0, 0, 0); root.scale.setScalar(1); }
+  } else if (ud.bounce > 0) {
+    ud.bounce = Math.max(0, ud.bounce - dt * 1.6); const q = Math.sin(ud.bounce * Math.PI * 3) * 0.06 * ud.bounce;
+    root.scale.set(1 + q, 1 - q, 1 + q); root.position.y = Math.max(0, Math.sin((1 - ud.bounce) * Math.PI)) * 0.25 * ud.bounce;
+  } else root.position.y = Math.sin(T * 1.2) * 0.015;   // gentle hover
+  if (winCam && camBase) {
+    winCam.t += dt; const k = easeInOut(Math.min(1, winCam.t / 2.6)), ang = k * 0.45, zoom = 1 + k * 0.16;
+    camera.position.set(camBase.x * Math.cos(ang) + camBase.z * Math.sin(ang), camBase.y, -camBase.x * Math.sin(ang) + camBase.z * Math.cos(ang)).multiplyScalar(zoom);
+    camera.lookAt(0, 0, 0);
   }
   flushPaths();
   const sdt = mode === 'run' ? dt * speed : dt;
@@ -2184,7 +2263,8 @@ function update(dt) {
       a.obj.position.z = a.z + Math.cos(T * a.speed * 0.8 + a.phase) * 0.18;
       a.obj.position.y = a.y + Math.sin(T * 1.1 + a.phase) * 0.12;
       a.obj.material.opacity = 0.35 + 0.6 * (0.5 + 0.5 * Math.sin(T * 2.4 + a.phase));
-    } else if (a.type === 'spin') a.obj.rotation.z -= dt * 1.4;
+    } else if (a.type === 'float') { a.obj.position.y = a.y + Math.sin(T * 1.1 + a.phase) * 0.06; a.obj.rotation.y += dt * 0.2; }
+    else if (a.type === 'spin') a.obj.rotation.z -= dt * 1.4;
     else if (a.type === 'spinY') a.obj.rotation.y -= dt * 3;
     else if (a.type === 'sway') a.obj.rotation.z = Math.sin(T * 1.3 + a.obj.userData.sway) * 0.03;
     else if (a.type === 'pad') { const on = mode === 'draw' && a.i === sel; a.obj.material.opacity = on ? 0.55 + 0.35 * Math.sin(T * 6) : 0.3; a.obj.scale.setScalar(on ? 1 + 0.08 * Math.sin(T * 6) : 1); }
@@ -2302,6 +2382,19 @@ function update(dt) {
     else if (e.kind === 'spark') { e.vel.y -= 9 * dt; e.obj.position.addScaledVector(e.vel, dt); e.obj.rotation.x += dt * 8; e.obj.scale.setScalar(k); }
     else if (e.kind === 'puff') { e.obj.position.y += dt * 0.5; e.obj.scale.setScalar(1 + (1 - k) * 2); e.obj.material.opacity = k * 0.8; }
     else if (e.kind === 'flash') e.obj.material.opacity = k * 0.7;
+    else if (e.kind === 'sweep') {
+      e.d += dt * 6;
+      const q = sampleAt(e.pl, Math.min(e.d, e.pl.length)), ly = e.lift ? e.lift(q) : 0;
+      e.obj.position.set(q.x, 0.14 + ly, q.z);
+      e.trail -= dt;
+      if (e.trail <= 0) {
+        e.trail = 0.035;
+        const sp = new THREE.Mesh(G('oct', () => new THREE.OctahedronGeometry(0.06)), new THREE.MeshBasicMaterial({ color: Math.random() < 0.4 ? 0xffffff : e.col, transparent: true }));
+        sp.position.copy(e.obj.position); root.add(sp);
+        fx.push({ kind: 'spark', obj: sp, life: 0.5, max: 0.5, vel: new THREE.Vector3((Math.random() - 0.5) * 0.8, 1 + Math.random(), (Math.random() - 0.5) * 0.8) });
+      }
+      if (e.d >= e.pl.length) { e.life = 0; ringFx(q, e.col, 1.6, 0.5); SFX.done(); }
+    }
     else if (e.kind === 'label') { e.obj.position.y += dt * 0.7; e.obj.material.opacity = Math.min(1, k * 2); const s = 0.8 * (1 + Math.max(0, (k - 0.8)) * 2); e.obj.scale.set(s, s / 2, 1); }
     else if (e.kind === 'bubble') {
       const age = e.max - e.life, u = clamp(age / 0.15, 0, 1), p = u - 1;
