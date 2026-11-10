@@ -278,10 +278,23 @@ button:active:not(:disabled) { animation: none !important; transform: translateY
 .pill::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; background: linear-gradient(110deg, transparent 42%, rgba(255,255,255,.45) 50%, transparent 58%) 160% 0 / 250% 100% no-repeat; animation: coinShine 4.8s ease-in-out infinite; }
 @keyframes coinShine { 0%, 78% { background-position: 160% 0; } 100% { background-position: -160% 0; } }
 
+#wipe { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; visibility: hidden; pointer-events: none; background: linear-gradient(145deg, #83e9ff, #c8b3ff 52%, #ffe69a); clip-path: circle(0% at 50% 50%); }
+#wipe span { font-size: clamp(64px, 20vw, 100px); filter: drop-shadow(0 8px 0 rgba(95,70,140,.18)); }
+#wipe.in, #wipe.out { visibility: visible; pointer-events: auto; }
+#wipe.in { animation: wipeCover .32s ease-in-out both; }
+#wipe.out { animation: wipeReveal .32s ease-in-out both; }
+#wipe.in span, #wipe.out span { animation: wipeBus .64s ease-in-out infinite; }
+@keyframes wipeCover { from { clip-path: circle(0% at 50% 50%); } to { clip-path: circle(150% at 50% 50%); } }
+@keyframes wipeReveal { from { clip-path: circle(150% at 50% 50%); } to { clip-path: circle(0% at 50% 50%); } }
+@keyframes wipeBus { 0%, 100% { transform: translateY(8px) scale(.9) rotate(-5deg); } 50% { transform: translateY(-12px) scale(1.12) rotate(5deg); } }
+@keyframes wipeFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes wipeFadeOut { from { opacity: 1; } to { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) {
   .shell, .shell *, .shell *::before, .shell *::after { animation: none !important; transition: none !important; }
   .home.hidden { transform: none; }
   .pill::after { content: none; }
+  #wipe.in, #wipe.out { clip-path: none; animation: wipeFadeIn .32s ease both !important; }
+  #wipe.out { animation-name: wipeFadeOut !important; }
 }
 </style>
 <script type="importmap">
@@ -293,6 +306,7 @@ button:active:not(:disabled) { animation: none !important; transform: translateY
 </head>
 <body>
 <div class="shell" id="frame">
+  <div id="wipe"><span>🚌</span></div>
   <canvas id="scene"></canvas>
   <div class="ripple" id="ripple"></div>
   <div class="hand" id="hand">👆</div>
@@ -360,7 +374,8 @@ button:active:not(:disabled) { animation: none !important; transform: translateY
     <div class="card panel">
       <div class="ribbon outline info">CÀI ĐẶT</div>
       <div class="inner">
-        <div class="row">🔊 Âm thanh <button class="sw" id="swSound"></button></div>
+        <div class="row">🎵 Nhạc nền <button class="sw" id="swMusic"></button></div>
+        <div class="row">🔊 Hiệu ứng <button class="sw" id="swSound"></button></div>
         <div class="row">📳 Rung <button class="sw" id="swVib"></button></div>
       </div>
       <button class="mbtn ghost" id="setHome">🏠 TRANG CHỦ</button>
@@ -396,12 +411,44 @@ const COLORS = {
 };
 const hex = c => '#' + COLORS[c].toString(16).padStart(6, '0');
 const THEMES = {
-  clean: {
+  city: {
     bg: 'linear-gradient(180deg, #5fd3ff 0%, #a8ecff 45%, #fff3b0 100%)',
-    plateau: 0xfff3e2, tileA: 0xfff0dc, tileB: 0xf7dfc0,
-    block: 0xc7a184, blockTop: 0xdcbb9c
+    plateau: 0xfff3e2, tileA: 0xfff0dc, tileB: 0xf7dfc0, rim: 0xe0a98a,
+    block: 0xc7a184, blockTop: 0xdcbb9c,
+    hemiSky: 0xffffff, hemiGround: 0xffe2d2, hemiIntensity: 1.15,
+    sunColor: 0xfff4e6, sunIntensity: 1.7, name: 'Thành phố', icon: '🏙️'
+  },
+  beach: {
+    bg: 'linear-gradient(180deg, #65ddff 0%, #b8f5f2 48%, #fff0b0 100%)',
+    plateau: 0xffe5a0, tileA: 0xffefbf, tileB: 0xffdfa1, rim: 0xe5b96d,
+    block: 0xecc77f, blockTop: 0xffe5a0,
+    hemiSky: 0xc6f5ff, hemiGround: 0xffe8ad, hemiIntensity: 1.2,
+    sunColor: 0xfff6d8, sunIntensity: 1.65, name: 'Bãi biển', icon: '🏖️'
+  },
+  forest: {
+    bg: 'linear-gradient(180deg, #7ae6cc 0%, #c9f5ae 48%, #fff2bc 100%)',
+    plateau: 0xb3d78b, tileA: 0xe5efbd, tileB: 0xcbe4a0, rim: 0x709f69,
+    block: 0x6d9b56, blockTop: 0x8dba67,
+    hemiSky: 0xe0fff2, hemiGround: 0xb7d39b, hemiIntensity: 1.2,
+    sunColor: 0xfff2ce, sunIntensity: 1.65, name: 'Rừng xanh', icon: '🌲'
+  },
+  snow: {
+    bg: 'linear-gradient(180deg, #8edbff 0%, #d8f6ff 48%, #fff0fa 100%)',
+    plateau: 0xe2f4ff, tileA: 0xf4fcff, tileB: 0xcfe9ff, rim: 0x91bada,
+    block: 0x8ecde9, blockTop: 0xc4efff,
+    hemiSky: 0xe6f7ff, hemiGround: 0xcbdafa, hemiIntensity: 1.25,
+    sunColor: 0xf5fbff, sunIntensity: 1.5, name: 'Xứ tuyết', icon: '❄️'
+  },
+  sunset: {
+    bg: 'linear-gradient(180deg, #b89aff 0%, #f7b4da 48%, #ffd48f 100%)',
+    plateau: 0xffd7bd, tileA: 0xffe8d1, tileB: 0xf7cfbe, rim: 0xd495ae,
+    block: 0xc29bbd, blockTop: 0xe4bbd3,
+    hemiSky: 0xe8caff, hemiGround: 0xffd0ac, hemiIntensity: 1.2,
+    sunColor: 0xffd29b, sunIntensity: 1.55, name: 'Hoàng hôn', icon: '🌇'
   }
 };
+THEMES.clean = THEMES.city;
+const WORLD_THEMES = ['city', 'beach', 'forest', 'snow', 'sunset'];
 
 /* =========================================================
    LEVELS  (grid [x, y]; y grows toward the player)
@@ -459,7 +506,32 @@ const LEVELS = [
 ];
 
 LEVELS.push(...[{"size":6,"cap":1,"buses":[{"id":"A","color":"pink","start":[5,5],"end":[0,5],"solution":[[5,5],[4,5],[3,5],[2,5],[1,5],[0,5]],"cap":1}],"pickups":[{"at":[4,4],"color":"pink","count":1}],"stations":[[1,4]],"blocks":[[3,0],[2,1],[1,2],[1,3]],"cross":[],"tp":[],"name":"Màn 9","tip":"Tìm đường cho từng xe!"},{"size":6,"cap":3,"buses":[{"id":"A","color":"purple","start":[2,5],"end":[5,3],"solution":[[2,5],[3,5],[4,5],[5,5],[5,4],[5,3]],"cap":3},{"id":"B","color":"green","start":[5,0],"end":[0,2],"solution":[[5,0],[5,1],[5,2],[4,2],[3,2],[2,2],[1,2],[0,2]],"cap":3}],"pickups":[{"at":[4,4],"color":"purple","count":1},{"at":[2,4],"color":"purple","count":2},{"at":[4,1],"color":"green","count":3},{"at":[2,1],"color":"green","count":1},{"at":[2,3],"color":"green","count":2}],"stations":[[4,3],[1,1]],"blocks":[[3,1]],"cross":[],"tp":[],"name":"Màn 10","tip":"Ghé trạm trả khách khi xe đầy."},{"size":6,"cap":3,"buses":[{"id":"A","color":"teal","start":[5,4],"end":[1,5],"solution":[[5,4],[5,5],[4,5],[3,5],[2,5],[1,5]],"cap":3},{"id":"B","color":"green","start":[0,4],"end":[4,0],"solution":[[0,4],[1,4],[2,4],[3,4],[4,4],[4,3],[4,2],[4,1],[4,0]],"cap":3}],"pickups":[{"at":[5,3],"color":"teal","count":3},{"at":[1,3],"color":"green","count":1},{"at":[0,3],"color":"green","count":2},{"at":[3,2],"color":"green","count":1},{"at":[5,2],"color":"green","count":2}],"stations":[[0,5],[3,3],[5,1]],"blocks":[[0,1]],"cross":[],"tp":[],"name":"Màn 11","tip":"Đừng để khách bị bỏ lại!"},{"size":6,"cap":3,"buses":[{"id":"A","color":"red","start":[0,1],"end":[1,5],"solution":[[0,1],[0,2],[0,3],[0,4],[0,5],[1,5]],"cap":1},{"id":"B","color":"green","start":[5,4],"end":[1,0],"solution":[[5,4],[4,4],[3,4],[2,4],[1,4],[1,3],[1,2],[1,1],[1,0]],"cap":3}],"pickups":[{"at":[0,0],"color":"red","count":1},{"at":[3,3],"color":"green","count":1},{"at":[3,5],"color":"green","count":2}],"stations":[[2,5],[2,1]],"blocks":[[4,3]],"cross":[],"tp":[],"name":"Màn 12","tip":"Xe nhỏ chở 3 khách, xe to chở 9 khách — nhìn số trên xe!"},{"size":6,"cap":2,"buses":[{"id":"A","color":"teal","start":[1,5],"end":[1,0],"solution":[[1,5],[1,4],[1,3],[1,2],[1,1],[1,0]],"cap":1},{"id":"B","color":"blue","start":[5,4],"end":[3,5],"solution":[[5,4],[4,4],[3,4],[2,4],[2,5],[3,5]],"cap":2}],"pickups":[{"at":[0,4],"color":"teal","count":1},{"at":[0,1],"color":"teal","count":1},{"at":[3,3],"color":"blue","count":2}],"stations":[[2,3],[2,0]],"blocks":[[4,2]],"cross":[],"tp":[],"name":"Màn 13","tip":"Đón đủ khách rồi về cổng nhé!"},{"size":6,"cap":3,"buses":[{"id":"A","color":"pink","start":[5,3],"end":[3,0],"solution":[[5,3],[5,2],[5,1],[5,0],[4,0],[3,0]],"cap":1},{"id":"B","color":"purple","start":[0,2],"end":[2,5],"solution":[[0,2],[0,1],[0,0],[1,0],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5]],"cap":3}],"pickups":[{"at":[4,2],"color":"pink","count":1},{"at":[1,1],"color":"purple","count":1},{"at":[1,2],"color":"purple","count":2}],"stations":[[4,1],[3,3]],"blocks":[[1,4],[0,5],[1,5]],"cross":[],"tp":[],"name":"Màn 14","tip":"Đón đủ khách rồi về cổng nhé!"},{"size":6,"cap":2,"buses":[{"id":"A","color":"red","start":[0,3],"end":[5,3],"solution":[[0,3],[1,3],[2,3],[3,3],[4,3],[5,3]],"cap":2},{"id":"B","color":"purple","start":[4,0],"end":[0,2],"solution":[[4,0],[4,1],[4,2],[3,2],[2,2],[1,2],[0,2]],"cap":2}],"pickups":[{"at":[0,4],"color":"red","count":2},{"at":[3,4],"color":"red","count":2},{"at":[3,0],"color":"purple","count":2},{"at":[2,1],"color":"purple","count":2}],"stations":[[2,4],[5,2],{"at":[0,1],"color":"purple"}],"blocks":[[0,0],[0,5],[4,5]],"cross":[],"tp":[],"name":"Màn 15","tip":"Trạm cắm cờ màu chỉ nhận khách cùng màu 🚩"},{"size":6,"cap":3,"buses":[{"id":"A","color":"purple","start":[0,4],"end":[5,4],"solution":[[0,4],[1,4],[2,4],[3,4],[4,4],[5,4]],"cap":3},{"id":"B","color":"orange","start":[0,0],"end":[5,3],"solution":[[0,0],[0,1],[0,2],[0,3],[1,3],[2,3],[3,3],[4,3],[5,3]],"cap":2}],"pickups":[{"at":[0,5],"color":"purple","count":3},{"at":[3,5],"color":"purple","count":1},{"at":[4,5],"color":"purple","count":2},{"at":[1,2],"color":"orange","count":2}],"stations":[[2,5],{"at":[5,5],"color":"purple"},{"at":[5,2],"color":"orange"}],"blocks":[],"cross":[],"tp":[],"name":"Màn 16","tip":"Ghé trạm trả khách khi xe đầy."},{"size":6,"cap":3,"buses":[{"id":"A","color":"teal","start":[0,3],"end":[3,5],"solution":[[0,3],[0,4],[0,5],[1,5],[2,5],[3,5]],"cap":3},{"id":"B","color":"orange","start":[2,0],"end":[5,4],"solution":[[2,0],[2,1],[2,2],[2,3],[2,4],[3,4],[4,4],[5,4]],"cap":2}],"pickups":[{"at":[1,3],"color":"teal","count":1},{"at":[0,2],"color":"teal","count":2},{"at":[3,0],"color":"orange","count":2},{"at":[1,4],"color":"orange","count":2}],"stations":[{"at":[4,5],"color":"teal"},{"at":[3,3],"color":"orange"},{"at":[5,5],"color":"orange"}],"blocks":[[5,3]],"cross":[],"tp":[],"name":"Màn 17","tip":"Tìm đường cho từng xe!"},{"size":6,"cap":3,"buses":[{"id":"A","color":"yellow","start":[1,0],"end":[1,5],"solution":[[1,0],[1,1],[1,2],[1,3],[1,4],[1,5]],"cap":1},{"id":"B","color":"purple","start":[5,1],"end":[2,5],"solution":[[5,1],[5,0],[4,0],[3,0],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5]],"cap":3}],"pickups":[{"at":[0,1],"color":"yellow","count":1},{"at":[0,3],"color":"yellow","count":1},{"at":[4,1],"color":"purple","count":3},{"at":[3,2],"color":"purple","count":3}],"stations":[{"at":[0,2],"color":"yellow"},{"at":[0,5],"color":"yellow"},[3,1],{"at":[3,5],"color":"purple"}],"blocks":[[5,4]],"cross":[],"tp":[],"name":"Màn 18","tip":"Tìm đường cho từng xe!"},{"size":7,"cap":2,"buses":[{"id":"A","color":"orange","start":[6,6],"end":[0,6],"solution":[[6,6],[5,6],[4,6],[3,6],[2,6],[1,6],[0,6]],"cap":2},{"id":"B","color":"green","start":[6,3],"end":[3,0],"solution":[[6,3],[6,2],[6,1],[6,0],[5,0],[4,0],[3,0]],"cap":1}],"pickups":[{"at":[6,5],"color":"orange","count":1},{"at":[5,5],"color":"orange","count":1},{"at":[3,5],"color":"orange","count":1},{"at":[2,5],"color":"orange","count":1},{"at":[5,2],"color":"green","count":1}],"stations":[[4,5],[0,5],[5,1]],"blocks":[[1,0],[3,3],[1,4]],"cross":[],"tp":[],"name":"Màn 19","tip":"Đừng để khách bị bỏ lại!"},{"size":7,"cap":2,"buses":[{"id":"A","color":"orange","start":[0,5],"end":[5,6],"solution":[[0,5],[0,6],[1,6],[2,6],[3,6],[4,6],[5,6]],"cap":2},{"id":"B","color":"pink","start":[6,5],"end":[1,0],"solution":[[6,5],[5,5],[4,5],[3,5],[2,5],[1,5],[1,4],[1,3],[1,2],[1,1],[1,0]],"cap":2}],"pickups":[{"at":[0,4],"color":"orange","count":2},{"at":[6,4],"color":"pink","count":1},{"at":[5,4],"color":"pink","count":1},{"at":[3,4],"color":"pink","count":2},{"at":[2,3],"color":"pink","count":2}],"stations":[{"at":[6,6],"color":"orange"},{"at":[4,4],"color":"pink"},{"at":[2,4],"color":"pink"},{"at":[0,0],"color":"pink"}],"blocks":[],"cross":[],"tp":[],"name":"Màn 20","tip":"Tìm đường cho từng xe!"},{"size":7,"cap":2,"buses":[{"id":"A","color":"orange","start":[0,2],"end":[6,2],"solution":[[0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2]],"cap":2},{"id":"B","color":"teal","start":[6,6],"end":[0,3],"solution":[[6,6],[6,5],[6,4],[6,3],[5,3],[4,3],[3,3],[2,3],[1,3],[0,3]],"cap":2}],"pickups":[{"at":[1,1],"color":"orange","count":2},{"at":[3,1],"color":"orange","count":2},{"at":[5,5],"color":"teal","count":2},{"at":[3,4],"color":"teal","count":1},{"at":[4,4],"color":"teal","count":1}],"stations":[[2,1],{"at":[6,1],"color":"orange"},[5,4],[1,4]],"blocks":[[0,0],[4,5]],"cross":[],"tp":[],"name":"Màn 21","tip":"Tìm đường cho từng xe!"},{"size":7,"cap":2,"buses":[{"id":"A","color":"teal","start":[4,6],"end":[0,4],"solution":[[4,6],[3,6],[2,6],[1,6],[0,6],[0,5],[0,4]],"cap":2},{"id":"B","color":"red","start":[0,0],"end":[6,3],"solution":[[0,0],[0,1],[0,2],[0,3],[1,3],[2,3],[3,3],[4,3],[5,3],[6,3]],"cap":2}],"pickups":[{"at":[4,5],"color":"teal","count":1},{"at":[5,6],"color":"teal","count":1},{"at":[1,5],"color":"teal","count":2},{"at":[1,0],"color":"red","count":1},{"at":[1,2],"color":"red","count":1},{"at":[3,2],"color":"red","count":2}],"stations":[[2,5],[1,4],{"at":[5,2],"color":"red"}],"blocks":[[4,0],[3,1]],"cross":[],"tp":[],"name":"Màn 22","tip":"Đừng để khách bị bỏ lại!"},{"size":7,"cap":2,"buses":[{"id":"A","color":"blue","start":[6,3],"end":[0,3],"solution":[[6,3],[5,3],[4,3],[3,3],[2,3],[1,3],[0,3]],"cap":2},{"id":"B","color":"purple","start":[5,6],"end":[0,4],"solution":[[5,6],[5,5],[5,4],[4,4],[3,4],[2,4],[1,4],[0,4]],"cap":2},{"id":"C","color":"green","start":[6,0],"end":[0,0],"solution":[[6,0],[5,0],[4,0],[3,0],[2,0],[1,0],[0,0]],"cap":1}],"pickups":[{"at":[6,2],"color":"blue","count":1},{"at":[6,4],"color":"blue","count":1},{"at":[3,2],"color":"blue","count":2},{"at":[1,2],"color":"blue","count":2},{"at":[6,5],"color":"purple","count":2},{"at":[3,5],"color":"purple","count":1},{"at":[2,5],"color":"purple","count":1},{"at":[5,1],"color":"green","count":1},{"at":[3,1],"color":"green","count":1},{"at":[1,1],"color":"green","count":1}],"stations":[{"at":[4,2],"color":"blue"},{"at":[2,2],"color":"blue"},{"at":[0,2],"color":"blue"},[4,5],[0,5],{"at":[4,1],"color":"green"},{"at":[2,1],"color":"green"},[0,1]],"blocks":[[5,2]],"cross":[],"tp":[],"name":"Màn 23","tip":"Ghé trạm trả khách khi xe đầy."},{"size":7,"cap":2,"buses":[{"id":"A","color":"green","start":[0,3],"end":[6,3],"solution":[[0,3],[1,3],[2,3],[3,3],[4,3],[5,3],[6,3]],"cap":2},{"id":"B","color":"pink","start":[3,0],"end":[0,2],"solution":[[3,0],[4,0],[5,0],[6,0],[6,1],[6,2],[5,2],[4,2],[3,2],[2,2],[1,2],[0,2]],"cap":2},{"id":"C","color":"orange","start":[6,5],"end":[0,5],"solution":[[6,5],[5,5],[4,5],[3,5],[2,5],[1,5],[0,5]],"cap":1}],"pickups":[{"at":[0,4],"color":"green","count":2},{"at":[3,4],"color":"green","count":2},{"at":[5,4],"color":"green","count":2},{"at":[4,1],"color":"pink","count":2},{"at":[3,1],"color":"pink","count":2},{"at":[6,6],"color":"orange","count":1},{"at":[4,6],"color":"orange","count":1},{"at":[1,4],"color":"orange","count":1}],"stations":[{"at":[2,4],"color":"green"},[4,4],[6,4],{"at":[5,1],"color":"pink"},{"at":[0,1],"color":"pink"},{"at":[2,6],"color":"orange"},{"at":[0,6],"color":"orange"}],"blocks":[],"cross":[],"tp":[],"name":"Màn 24","tip":"Đừng để khách bị bỏ lại!"},{"size":7,"cap":3,"buses":[{"id":"A","color":"red","start":[0,1],"end":[6,1],"solution":[[0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1]],"cap":3},{"id":"B","color":"orange","start":[0,3],"end":[3,6],"solution":[[0,3],[0,4],[0,5],[0,6],[1,6],[2,6],[3,6]],"cap":3},{"id":"C","color":"pink","start":[5,0],"end":[5,6],"solution":[[5,0],[5,1],[5,2],[5,3],[5,4],[5,5],[5,6]],"cap":1}],"pickups":[{"at":[0,0],"color":"red","count":3},{"at":[3,0],"color":"red","count":1},{"at":[3,2],"color":"red","count":2},{"at":[4,0],"color":"red","count":3},{"at":[0,2],"color":"orange","count":3},{"at":[2,5],"color":"orange","count":3},{"at":[6,0],"color":"pink","count":1},{"at":[6,3],"color":"pink","count":1},{"at":[6,4],"color":"pink","count":1}],"stations":[{"at":[2,0],"color":"red"},[4,2],{"at":[6,2],"color":"red"},{"at":[1,5],"color":"orange"},[4,6],{"at":[4,4],"color":"pink"}],"blocks":[[1,2],[2,2]],"cross":[[5,1]],"tp":[],"name":"Màn 25","tip":"Cầu vượt: xe đi ngang chạy trên cầu, xe đi dọc chui dưới — phải đi thẳng!"},{"size":7,"cap":2,"buses":[{"id":"A","color":"pink","start":[4,6],"end":[0,4],"solution":[[4,6],[3,6],[2,6],[1,6],[0,6],[0,5],[0,4]],"cap":2},{"id":"B","color":"red","start":[4,0],"end":[6,5],"solution":[[4,0],[4,1],[4,2],[4,3],[4,4],[4,5],[5,5],[6,5]],"cap":2},{"id":"C","color":"orange","start":[6,0],"end":[5,6],"solution":[[6,0],[5,0],[5,1],[5,2],[5,3],[5,4],[5,5],[5,6]],"cap":2}],"pickups":[{"at":[2,5],"color":"pink","count":1},{"at":[1,5],"color":"pink","count":1},{"at":[3,0],"color":"red","count":2},{"at":[3,3],"color":"red","count":2},{"at":[3,5],"color":"red","count":2},{"at":[6,1],"color":"orange","count":2},{"at":[6,4],"color":"orange","count":1},{"at":[6,3],"color":"orange","count":1}],"stations":[[1,4],[3,2],[3,4],[6,6],{"at":[6,2],"color":"orange"}],"blocks":[[2,3],[2,4]],"cross":[[5,5]],"tp":[],"name":"Màn 26","tip":"Đừng để khách bị bỏ lại!"},{"size":7,"cap":3,"buses":[{"id":"A","color":"yellow","start":[6,2],"end":[4,6],"solution":[[6,2],[6,3],[6,4],[6,5],[6,6],[5,6],[4,6]],"cap":3},{"id":"B","color":"purple","start":[0,4],"end":[3,0],"solution":[[0,4],[0,5],[0,6],[1,6],[2,6],[3,6],[3,5],[3,4],[3,3],[3,2],[3,1],[3,0]],"cap":2},{"id":"C","color":"orange","start":[6,1],"end":[0,1],"solution":[[6,1],[5,1],[4,1],[3,1],[2,1],[1,1],[0,1]],"cap":2}],"pickups":[{"at":[5,3],"color":"yellow","count":1},{"at":[5,2],"color":"yellow","count":2},{"at":[5,5],"color":"yellow","count":3},{"at":[1,4],"color":"purple","count":2},{"at":[2,4],"color":"purple","count":1},{"at":[4,4],"color":"purple","count":1},{"at":[6,0],"color":"orange","count":2},{"at":[4,2],"color":"orange","count":2},{"at":[1,0],"color":"orange","count":2}],"stations":[{"at":[5,4],"color":"yellow"},[4,5],[2,5],[2,2],{"at":[4,0],"color":"orange"},{"at":[0,2],"color":"orange"}],"blocks":[[5,0]],"cross":[[3,1]],"tp":[],"name":"Màn 27","tip":"Đón đủ khách rồi về cổng nhé!"},{"size":7,"cap":2,"buses":[{"id":"A","color":"pink","start":[5,0],"end":[0,1],"solution":[[5,0],[4,0],[3,0],[2,0],[1,0],[0,0],[0,1]],"cap":1},{"id":"B","color":"purple","start":[5,6],"end":[1,6],"solution":[[5,6],[5,5],[5,4],[5,3],[5,2],[5,1],[4,1],[3,1],[2,1],[1,1],[1,2],[1,3],[1,4],[1,5],[1,6]],"cap":2},{"id":"C","color":"orange","start":[6,4],"end":[0,4],"solution":[[6,4],[5,4],[4,4],[3,4],[2,4],[1,4],[0,4]],"cap":1}],"pickups":[{"at":[6,0],"color":"pink","count":1},{"at":[4,6],"color":"purple","count":2},{"at":[3,2],"color":"purple","count":2},{"at":[0,3],"color":"purple","count":2},{"at":[6,5],"color":"orange","count":1},{"at":[3,5],"color":"orange","count":1}],"stations":[{"at":[0,2],"color":"pink"},[6,2],{"at":[2,2],"color":"purple"},{"at":[2,5],"color":"purple"},[4,5],{"at":[0,5],"color":"orange"}],"blocks":[],"cross":[[5,4],[1,4]],"tp":[],"name":"Màn 28","tip":"Đừng để khách bị bỏ lại!"},{"size":8,"cap":2,"buses":[{"id":"A","color":"teal","start":[7,6],"end":[0,6],"solution":[[7,6],[6,6],[5,6],[4,6],[3,6],[2,6],[1,6],[0,6]],"cap":1},{"id":"B","color":"purple","start":[4,7],"end":[4,0],"solution":[[4,7],[4,6],[4,5],[4,4],[4,3],[4,2],[4,1],[4,0]],"cap":1},{"id":"C","color":"red","start":[6,0],"end":[7,4],"solution":[[6,0],[6,1],[6,2],[6,3],[6,4],[6,5],[7,5],[7,4]],"cap":2}],"pickups":[{"at":[7,7],"color":"teal","count":1},{"at":[2,5],"color":"teal","count":1},{"at":[3,7],"color":"purple","count":1},{"at":[5,2],"color":"purple","count":1},{"at":[7,0],"color":"red","count":1},{"at":[5,0],"color":"red","count":1},{"at":[5,4],"color":"red","count":1},{"at":[5,5],"color":"red","count":1}],"stations":[[5,7],[0,7],[3,4],{"at":[3,0],"color":"purple"},[5,3],{"at":[7,3],"color":"red"}],"blocks":[[1,0],[0,1],[1,1],[0,2],[7,2],[0,3],[3,3],[3,5],[2,7]],"cross":[[4,6]],"tp":[],"name":"Màn 29","tip":"Đừng để khách bị bỏ lại!"},{"size":8,"cap":2,"buses":[{"id":"A","color":"purple","start":[0,1],"end":[7,1],"solution":[[0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[7,1]],"cap":2},{"id":"B","color":"yellow","start":[1,0],"end":[1,7],"solution":[[1,0],[1,1],[1,2],[1,3],[1,4],[1,5],[1,6],[1,7]],"cap":1},{"id":"C","color":"pink","start":[7,7],"end":[7,2],"solution":[[7,7],[6,7],[5,7],[4,7],[3,7],[2,7],[2,6],[2,5],[2,4],[2,3],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2]],"cap":2}],"pickups":[{"at":[0,2],"color":"purple","count":1},{"at":[0,0],"color":"purple","count":1},{"at":[2,0],"color":"yellow","count":1},{"at":[3,6],"color":"pink","count":1},{"at":[4,6],"color":"pink","count":1}],"stations":[{"at":[5,0],"color":"purple"},[0,6],[3,3]],"blocks":[[6,3],[6,4],[3,5],[6,5]],"cross":[[1,1]],"tp":[],"name":"Màn 30","tip":"Đón đủ khách rồi về cổng nhé!"},{"size":8,"cap":3,"buses":[{"id":"A","color":"yellow","start":[1,7],"end":[1,0],"solution":[[1,7],[1,6],[1,5],[1,4],[1,3],[1,2],[1,1],[1,0]],"cap":2},{"id":"B","color":"orange","start":[0,6],"end":[7,6],"solution":[[0,6],[1,6],[2,6],[3,6],[4,6],[5,6],[6,6],[7,6]],"cap":2},{"id":"C","color":"green","start":[5,0],"end":[7,5],"solution":[[5,0],[4,0],[3,0],[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[3,5],[4,5],[5,5],[6,5],[7,5]],"cap":3}],"pickups":[{"at":[2,7],"color":"yellow","count":2},{"at":[0,3],"color":"yellow","count":1},{"at":[0,2],"color":"yellow","count":1},{"at":[0,7],"color":"orange","count":1},{"at":[3,7],"color":"orange","count":1},{"at":[6,0],"color":"green","count":3},{"at":[3,4],"color":"green","count":1},{"at":[4,4],"color":"green","count":2}],"stations":[[0,5],[0,1],[7,7],[3,3],[7,4]],"blocks":[[0,0],[7,0],[7,2]],"cross":[[1,6]],"tp":[],"name":"Màn 31","tip":"Tìm đường cho từng xe!"},{"size":8,"cap":3,"buses":[{"id":"A","color":"teal","start":[6,0],"end":[6,7],"solution":[[6,0],[6,1],[6,2],[6,3],[6,4],[6,5],[6,6],[6,7]],"cap":2},{"id":"B","color":"red","start":[7,6],"end":[0,6],"solution":[[7,6],[6,6],[5,6],[4,6],[3,6],[2,6],[1,6],[0,6]],"cap":3},{"id":"C","color":"blue","start":[2,0],"end":[5,0],"solution":[[2,0],[2,1],[2,2],[2,3],[2,4],[2,5],[3,5],[4,5],[5,5],[5,4],[5,3],[5,2],[5,1],[5,0]],"cap":2},{"id":"D","color":"purple","start":[0,5],"end":[0,0],"solution":[[0,5],[1,5],[1,4],[1,3],[1,2],[1,1],[1,0],[0,0]],"cap":2}],"pickups":[{"at":[7,1],"color":"teal","count":1},{"at":[7,0],"color":"teal","count":1},{"at":[7,3],"color":"teal","count":2},{"at":[7,5],"color":"teal","count":2},{"at":[7,7],"color":"red","count":3},{"at":[2,7],"color":"red","count":3},{"at":[3,1],"color":"blue","count":2},{"at":[3,4],"color":"blue","count":2},{"at":[4,3],"color":"blue","count":2},{"at":[0,3],"color":"purple","count":1},{"at":[0,4],"color":"purple","count":1}],"stations":[[7,2],[7,4],{"at":[5,7],"color":"teal"},[4,7],[0,7],[3,3],{"at":[4,4],"color":"blue"},{"at":[4,0],"color":"blue"},{"at":[0,1],"color":"purple"}],"blocks":[[3,0],[1,7]],"cross":[[6,6]],"tp":[],"name":"Màn 32","tip":"Tìm đường cho từng xe!"},{"size":8,"cap":3,"buses":[{"id":"A","color":"red","start":[2,7],"end":[5,0],"solution":[[2,7],[2,6],[2,5],[2,4],[2,3],[5,5],[5,4],[5,3],[5,2],[5,1],[5,0]],"cap":2},{"id":"B","color":"purple","start":[7,6],"end":[6,0],"solution":[[7,6],[7,5],[7,4],[7,3],[7,2],[7,1],[7,0],[6,0]],"cap":3},{"id":"C","color":"pink","start":[0,7],"end":[1,0],"solution":[[0,7],[1,7],[1,6],[1,5],[1,4],[1,3],[1,2],[1,1],[1,0]],"cap":3},{"id":"D","color":"teal","start":[5,7],"end":[3,0],"solution":[[5,7],[4,7],[3,7],[3,6],[3,5],[3,4],[3,3],[3,2],[3,1],[3,0]],"cap":2}],"pickups":[{"at":[2,2],"color":"red","count":2},{"at":[6,6],"color":"purple","count":3},{"at":[0,6],"color":"pink","count":3},{"at":[0,3],"color":"pink","count":1},{"at":[0,4],"color":"pink","count":2},{"at":[4,6],"color":"teal","count":1},{"at":[5,6],"color":"teal","count":1},{"at":[4,4],"color":"teal","count":2}],"stations":[[6,3],[6,2],[0,5],{"at":[0,0],"color":"pink"},[4,5],[4,1]],"blocks":[[2,0]],"cross":[],"tp":[{"a":[2,3],"b":[5,5]}],"name":"Màn 33","tip":"Vẽ vào ống dịch chuyển để sang ống cùng màu 🌀"},{"size":8,"cap":3,"buses":[{"id":"A","color":"yellow","start":[0,6],"end":[7,6],"solution":[[0,6],[1,6],[2,6],[3,6],[4,6],[5,6],[6,6],[7,6]],"cap":3},{"id":"B","color":"teal","start":[7,5],"end":[5,0],"solution":[[7,5],[7,4],[7,3],[7,2],[7,1],[7,0],[6,0],[5,0]],"cap":1},{"id":"C","color":"purple","start":[5,7],"end":[0,1],"solution":[[5,7],[5,6],[5,5],[5,4],[5,3],[5,2],[5,1],[4,1],[3,1],[2,1],[1,1],[0,1]],"cap":1},{"id":"D","color":"blue","start":[0,5],"end":[0,2],"solution":[[0,5],[1,5],[2,5],[3,5],[4,5],[4,4],[4,3],[4,2],[3,2],[2,2],[1,2],[0,2]],"cap":3}],"pickups":[{"at":[1,7],"color":"yellow","count":1},{"at":[0,7],"color":"yellow","count":2},{"at":[3,7],"color":"yellow","count":3},{"at":[6,5],"color":"yellow","count":3},{"at":[6,3],"color":"teal","count":1},{"at":[6,7],"color":"purple","count":1},{"at":[6,2],"color":"purple","count":1},{"at":[3,0],"color":"purple","count":1},{"at":[2,4],"color":"blue","count":3}],"stations":[[2,7],[4,7],[7,7],[6,1],{"at":[6,4],"color":"purple"},[0,0],[1,3]],"blocks":[[1,0],[0,4]],"cross":[[5,6]],"tp":[],"name":"Màn 34","tip":"Tìm đường cho từng xe!"},{"size":8,"cap":3,"buses":[{"id":"A","color":"orange","start":[3,7],"end":[3,0],"solution":[[3,7],[3,6],[3,5],[3,4],[3,3],[3,2],[3,1],[3,0]],"cap":3},{"id":"B","color":"purple","start":[5,7],"end":[0,1],"solution":[[5,7],[5,6],[5,5],[1,2],[1,1],[1,0],[0,0],[0,1]],"cap":3},{"id":"C","color":"red","start":[7,6],"end":[6,0],"solution":[[7,6],[7,5],[7,4],[7,3],[7,2],[7,1],[7,0],[6,0]],"cap":2},{"id":"D","color":"yellow","start":[0,3],"end":[1,7],"solution":[[0,3],[1,3],[2,3],[2,4],[2,5],[2,6],[2,7],[1,7]],"cap":2}],"pickups":[{"at":[4,6],"color":"orange","count":1},{"at":[4,4],"color":"orange","count":2},{"at":[6,6],"color":"purple","count":3},{"at":[6,5],"color":"purple","count":1},{"at":[5,4],"color":"purple","count":2},{"at":[2,0],"color":"purple","count":3},{"at":[7,7],"color":"red","count":2},{"at":[6,3],"color":"red","count":2},{"at":[6,1],"color":"red","count":2},{"at":[0,4],"color":"yellow","count":2},{"at":[1,4],"color":"yellow","count":2},{"at":[1,6],"color":"yellow","count":2}],"stations":[[4,3],[4,5],[2,1],{"at":[0,2],"color":"purple"},[6,4],[6,2],[5,0],[2,2],{"at":[1,5],"color":"yellow"},[0,7]],"blocks":[[6,7]],"cross":[],"tp":[{"a":[5,5],"b":[1,2]}],"name":"Màn 35","tip":"Tìm đường cho từng xe!"},{"size":8,"cap":3,"buses":[{"id":"A","color":"yellow","start":[1,0],"end":[1,7],"solution":[[1,0],[1,1],[1,2],[1,3],[1,4],[1,5],[1,6],[1,7]],"cap":2},{"id":"B","color":"orange","start":[0,3],"end":[7,3],"solution":[[0,3],[1,3],[2,3],[3,3],[4,3],[5,3],[6,3],[7,3]],"cap":3},{"id":"C","color":"blue","start":[7,5],"end":[2,7],"solution":[[7,5],[7,6],[7,7],[6,7],[5,7],[4,7],[3,7],[2,7]],"cap":2},{"id":"D","color":"teal","start":[7,1],"end":[3,0],"solution":[[7,1],[6,1],[5,1],[4,1],[3,1],[2,1],[2,0],[3,0]],"cap":1}],"pickups":[{"at":[0,0],"color":"yellow","count":1},{"at":[0,1],"color":"yellow","count":1},{"at":[0,2],"color":"yellow","count":2},{"at":[0,6],"color":"yellow","count":2},{"at":[0,4],"color":"orange","count":3},{"at":[3,2],"color":"orange","count":1},{"at":[3,4],"color":"orange","count":2},{"at":[5,2],"color":"orange","count":1},{"at":[5,4],"color":"orange","count":2},{"at":[6,6],"color":"blue","count":2},{"at":[5,0],"color":"teal","count":1}],"stations":[[2,2],{"at":[2,4],"color":"yellow"},[0,7],{"at":[4,2],"color":"orange"},{"at":[7,4],"color":"orange"},{"at":[5,6],"color":"blue"}],"blocks":[[6,2],[4,4]],"cross":[[1,3]],"tp":[],"name":"Màn 36","tip":"Đừng để khách bị bỏ lại!"},{"size":8,"cap":3,"buses":[{"id":"A","color":"blue","start":[0,4],"end":[7,1],"solution":[[0,4],[1,4],[2,4],[3,4],[4,4],[5,4],[6,4],[4,1],[5,1],[6,1],[7,1]],"cap":1},{"id":"B","color":"teal","start":[2,0],"end":[0,1],"solution":[[2,0],[2,1],[2,2],[2,3],[1,3],[0,3],[0,2],[0,1]],"cap":3},{"id":"C","color":"orange","start":[6,0],"end":[7,3],"solution":[[6,0],[5,0],[4,0],[3,0],[3,1],[3,2],[3,3],[4,3],[5,3],[6,3],[7,3]],"cap":2},{"id":"D","color":"yellow","start":[0,6],"end":[7,6],"solution":[[0,6],[1,6],[2,6],[3,6],[4,6],[5,6],[6,6],[7,6]],"cap":2}],"pickups":[{"at":[0,5],"color":"blue","count":1},{"at":[4,5],"color":"blue","count":1},{"at":[4,2],"color":"blue","count":1},{"at":[1,1],"color":"teal","count":3},{"at":[7,0],"color":"orange","count":2},{"at":[0,7],"color":"yellow","count":2},{"at":[3,5],"color":"yellow","count":2},{"at":[5,5],"color":"yellow","count":1},{"at":[5,7],"color":"yellow","count":1}],"stations":[[2,5],{"at":[7,4],"color":"blue"},[6,2],[1,2],{"at":[4,7],"color":"yellow"},[7,5]],"blocks":[[7,2],[6,5],[1,7]],"cross":[],"tp":[{"a":[6,4],"b":[4,1]}],"name":"Màn 37","tip":"Đón đủ khách rồi về cổng nhé!"},{"size":8,"cap":3,"buses":[{"id":"A","color":"blue","start":[7,3],"end":[0,3],"solution":[[7,3],[6,3],[5,3],[4,3],[3,3],[2,3],[1,3],[0,3]],"cap":2},{"id":"B","color":"red","start":[0,6],"end":[6,7],"solution":[[0,6],[0,7],[1,7],[2,7],[3,7],[4,7],[5,7],[6,7]],"cap":2},{"id":"C","color":"pink","start":[2,0],"end":[7,2],"solution":[[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[7,1],[7,2]],"cap":1},{"id":"D","color":"yellow","start":[1,0],"end":[7,6],"solution":[[1,0],[1,1],[1,2],[1,3],[1,4],[1,5],[1,6],[2,6],[3,6],[4,6],[5,6],[6,6],[7,6]],"cap":3}],"pickups":[{"at":[7,4],"color":"blue","count":2},{"at":[5,4],"color":"blue","count":2},{"at":[2,2],"color":"blue","count":2},{"at":[0,5],"color":"red","count":2},{"at":[4,1],"color":"pink","count":1},{"at":[2,1],"color":"yellow","count":3},{"at":[2,4],"color":"yellow","count":3},{"at":[3,5],"color":"yellow","count":3}],"stations":[{"at":[5,2],"color":"blue"},[3,2],[0,4],{"at":[7,7],"color":"red"},[6,2],[0,2],[2,5],[7,5]],"blocks":[[3,1],[5,1],[4,2],[3,4]],"cross":[[1,3]],"tp":[],"name":"Màn 38","tip":"Đừng để khách bị bỏ lại!"},{"size":9,"cap":2,"buses":[{"id":"A","color":"yellow","start":[4,0],"end":[1,8],"solution":[[4,0],[4,1],[4,2],[4,3],[4,4],[2,6],[2,7],[2,8],[1,8]],"cap":1},{"id":"B","color":"pink","start":[8,6],"end":[6,0],"solution":[[8,6],[8,5],[8,4],[8,3],[8,2],[8,1],[8,0],[7,0],[6,0]],"cap":2},{"id":"C","color":"green","start":[8,8],"end":[3,0],"solution":[[8,8],[8,7],[7,7],[6,7],[5,7],[4,7],[3,7],[3,6],[3,5],[3,4],[3,3],[3,2],[3,1],[3,0]],"cap":2},{"id":"D","color":"orange","start":[0,5],"end":[1,0],"solution":[[0,5],[1,5],[2,5],[2,4],[2,3],[2,2],[2,1],[2,0],[1,0]],"cap":1}],"pickups":[{"at":[5,2],"color":"yellow","count":1},{"at":[1,6],"color":"yellow","count":1},{"at":[7,5],"color":"pink","count":1},{"at":[7,4],"color":"pink","count":1},{"at":[7,1],"color":"pink","count":2},{"at":[4,6],"color":"green","count":2},{"at":[1,4],"color":"orange","count":1}],"stations":[[5,3],{"at":[3,8],"color":"yellow"},{"at":[7,3],"color":"pink"},[6,1],{"at":[4,5],"color":"green"},[1,1]],"blocks":[[5,1],[1,2],[6,3],[6,4],[0,6],[0,8]],"cross":[],"tp":[{"a":[4,4],"b":[2,6]}],"name":"Màn 39","tip":"Tìm đường cho từng xe!"},{"size":9,"cap":3,"buses":[{"id":"A","color":"blue","start":[4,8],"end":[8,4],"solution":[[4,8],[5,8],[6,8],[7,8],[8,8],[8,7],[8,6],[8,5],[8,4]],"cap":1},{"id":"B","color":"teal","start":[0,6],"end":[3,0],"solution":[[0,6],[0,7],[0,8],[1,8],[2,8],[3,8],[3,7],[3,6],[3,5],[3,4],[3,3],[3,2],[3,1],[3,0]],"cap":2},{"id":"C","color":"orange","start":[0,2],"end":[8,2],"solution":[[0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,2],[7,2],[8,2]],"cap":3},{"id":"D","color":"purple","start":[6,0],"end":[1,0],"solution":[[6,0],[6,1],[6,2],[6,3],[6,4],[6,5],[6,6],[6,7],[5,7],[4,7],[3,7],[2,7],[1,7],[1,6],[1,5],[1,4],[1,3],[1,2],[1,1],[1,0]],"cap":2}],"pickups":[{"at":[7,7],"color":"blue","count":1},{"at":[0,5],"color":"teal","count":2},{"at":[4,1],"color":"orange","count":1},{"at":[4,3],"color":"orange","count":2},{"at":[5,1],"color":"purple","count":2},{"at":[5,6],"color":"purple","count":2},{"at":[2,5],"color":"purple","count":1},{"at":[0,4],"color":"purple","count":1}],"stations":[[7,6],[2,0],{"at":[8,1],"color":"orange"},{"at":[5,4],"color":"purple"},[2,6]],"blocks":[[5,0],[7,0],[2,3],[4,4],[7,4]],"cross":[[3,2],[6,2],[3,7],[1,2]],"tp":[],"name":"Màn 40","tip":"Đón đủ khách rồi về cổng nhé!"},{"size":9,"cap":3,"buses":[{"id":"A","color":"orange","start":[0,1],"end":[7,0],"solution":[[0,1],[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[7,0]],"cap":3},{"id":"B","color":"yellow","start":[1,8],"end":[8,7],"solution":[[1,8],[2,8],[3,8],[4,8],[5,8],[6,8],[7,8],[8,8],[8,7]],"cap":1},{"id":"C","color":"purple","start":[8,5],"end":[0,2],"solution":[[8,5],[8,6],[7,6],[6,6],[5,6],[4,6],[3,6],[2,6],[7,2],[6,2],[5,2],[4,2],[3,2],[2,2],[1,2],[0,2]],"cap":2},{"id":"D","color":"teal","start":[8,3],"end":[0,3],"solution":[[8,3],[7,3],[6,3],[5,3],[4,3],[3,3],[2,3],[1,3],[0,3]],"cap":3}],"pickups":[{"at":[3,1],"color":"orange","count":3},{"at":[2,7],"color":"yellow","count":1},{"at":[7,5],"color":"purple","count":2},{"at":[5,1],"color":"purple","count":2},{"at":[8,2],"color":"teal","count":1},{"at":[8,4],"color":"teal","count":2},{"at":[2,4],"color":"teal","count":3}],"stations":[[6,1],{"at":[7,7],"color":"yellow"},[5,5],[1,1],{"at":[5,4],"color":"teal"},{"at":[0,4],"color":"teal"}],"blocks":[[3,4],[1,6]],"cross":[],"tp":[{"a":[2,6],"b":[7,2]}],"name":"Màn 41","tip":"Tìm đường cho từng xe!"},{"size":9,"cap":2,"buses":[{"id":"A","color":"blue","start":[4,0],"end":[4,8],"solution":[[4,0],[4,1],[4,2],[4,3],[4,4],[4,5],[4,6],[4,7],[4,8]],"cap":2},{"id":"B","color":"green","start":[1,8],"end":[1,0],"solution":[[1,8],[1,7],[1,6],[1,5],[1,4],[1,3],[1,2],[1,1],[1,0]],"cap":2},{"id":"C","color":"pink","start":[0,1],"end":[8,1],"solution":[[0,1],[1,1],[2,1],[3,1],[4,1],[5,1],[6,1],[7,1],[8,1]],"cap":2},{"id":"D","color":"red","start":[7,8],"end":[8,2],"solution":[[7,8],[6,8],[5,8],[5,7],[5,6],[5,5],[5,4],[5,3],[5,2],[6,2],[7,2],[8,2]],"cap":2}],"pickups":[{"at":[3,2],"color":"blue","count":2},{"at":[3,5],"color":"blue","count":2},{"at":[0,7],"color":"green","count":2},{"at":[2,3],"color":"green","count":2},{"at":[0,2],"color":"pink","count":1},{"at":[2,0],"color":"pink","count":1},{"at":[5,0],"color":"pink","count":2},{"at":[6,7],"color":"red","count":2}],"stations":[[3,3],{"at":[3,7],"color":"blue"},{"at":[2,5],"color":"green"},{"at":[0,0],"color":"green"},{"at":[3,0],"color":"pink"},[7,0],{"at":[8,3],"color":"red"}],"blocks":[[2,4],[3,4],[0,5],[7,6]],"cross":[[1,1],[4,1]],"tp":[],"name":"Màn 42","tip":"Ghé trạm trả khách khi xe đầy."},{"size":9,"cap":3,"buses":[{"id":"A","color":"red","start":[2,8],"end":[5,0],"solution":[[2,8],[2,7],[2,6],[2,5],[2,4],[2,3],[2,2],[5,4],[5,3],[5,2],[5,1],[5,0]],"cap":2},{"id":"B","color":"orange","start":[8,3],"end":[6,8],"solution":[[8,3],[8,2],[8,1],[8,0],[7,0],[6,0],[6,1],[6,2],[6,3],[6,4],[6,5],[6,6],[6,7],[6,8]],"cap":3},{"id":"C","color":"purple","start":[0,8],"end":[0,0],"solution":[[0,8],[0,7],[0,6],[0,5],[0,4],[0,3],[0,2],[0,1],[0,0]],"cap":2},{"id":"D","color":"teal","start":[5,8],"end":[3,0],"solution":[[5,8],[4,8],[3,8],[3,7],[3,6],[3,5],[3,4],[3,3],[3,2],[3,1],[3,0]],"cap":2}],"pickups":[{"at":[1,6],"color":"red","count":1},{"at":[1,8],"color":"red","count":1},{"at":[4,4],"color":"red","count":2},{"at":[7,2],"color":"orange","count":3},{"at":[7,3],"color":"orange","count":3},{"at":[1,7],"color":"purple","count":2},{"at":[1,3],"color":"purple","count":1},{"at":[1,2],"color":"purple","count":1},{"at":[4,6],"color":"teal","count":1},{"at":[4,7],"color":"teal","count":1}],"stations":[{"at":[1,4],"color":"red"},[4,1],[7,1],{"at":[7,8],"color":"orange"},{"at":[1,5],"color":"purple"},[1,0]],"blocks":[[4,2],[5,5],[8,5],[5,7],[8,7],[8,8]],"cross":[],"tp":[{"a":[2,2],"b":[5,4]}],"name":"Màn 43","tip":"Ghé trạm trả khách khi xe đầy."},{"size":9,"cap":3,"buses":[{"id":"A","color":"red","start":[8,3],"end":[0,7],"solution":[[8,3],[7,3],[6,3],[6,7],[5,7],[4,7],[3,7],[2,7],[1,7],[0,7]],"cap":3},{"id":"B","color":"purple","start":[6,8],"end":[0,4],"solution":[[6,8],[7,8],[8,8],[8,7],[8,6],[8,5],[8,4],[7,4],[6,4],[5,4],[4,4],[3,4],[2,4],[1,4],[0,4]],"cap":1},{"id":"C","color":"green","start":[1,0],"end":[1,8],"solution":[[1,0],[1,1],[1,2],[1,3],[1,4],[1,5],[1,6],[1,7],[1,8]],"cap":1},{"id":"D","color":"orange","start":[7,0],"end":[8,2],"solution":[[7,0],[6,0],[5,0],[4,0],[3,0],[2,0],[2,1],[2,2],[2,3],[3,3],[4,3],[5,3],[5,2],[5,1],[6,1],[7,1],[8,1],[8,2]],"cap":2}],"pickups":[{"at":[6,2],"color":"red","count":3},{"at":[4,6],"color":"red","count":3},{"at":[7,7],"color":"purple","count":1},{"at":[4,5],"color":"purple","count":1},{"at":[0,0],"color":"green","count":1},{"at":[2,6],"color":"green","count":1},{"at":[4,1],"color":"orange","count":1},{"at":[8,0],"color":"orange","count":1}],"stations":[{"at":[6,6],"color":"red"},{"at":[0,8],"color":"red"},[7,5],{"at":[3,5],"color":"purple"},{"at":[0,3],"color":"green"},[2,8],{"at":[7,2],"color":"orange"}],"blocks":[[5,5],[0,6],[7,6],[3,8],[5,8]],"cross":[[1,4],[1,7]],"tp":[{"a":[6,3],"b":[6,7]}],"name":"Màn 44","tip":"Đừng để khách bị bỏ lại!"},{"size":9,"cap":3,"buses":[{"id":"A","color":"orange","start":[3,0],"end":[8,3],"solution":[[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],[8,1],[8,2],[8,3]],"cap":1},{"id":"B","color":"teal","start":[0,3],"end":[3,8],"solution":[[0,3],[0,2],[0,1],[0,0],[1,0],[2,0],[2,1],[3,5],[3,6],[3,7],[3,8]],"cap":2},{"id":"C","color":"green","start":[0,5],"end":[8,4],"solution":[[0,5],[0,4],[1,4],[2,4],[3,4],[4,4],[5,4],[6,4],[7,4],[8,4]],"cap":3},{"id":"D","color":"red","start":[8,6],"end":[6,8],"solution":[[8,6],[7,6],[6,6],[5,6],[4,6],[4,7],[4,8],[5,8],[6,8]],"cap":2}],"pickups":[{"at":[4,1],"color":"orange","count":1},{"at":[7,1],"color":"orange","count":1},{"at":[1,1],"color":"teal","count":2},{"at":[1,3],"color":"green","count":3},{"at":[6,3],"color":"green","count":3},{"at":[5,5],"color":"red","count":1},{"at":[5,7],"color":"red","count":1}],"stations":[{"at":[6,1],"color":"orange"},[7,3],[2,6],[2,5],[7,8]],"blocks":[[1,2],[3,2],[0,6],[0,7],[0,8]],"cross":[],"tp":[{"a":[2,1],"b":[3,5]}],"name":"Màn 45","tip":"Ghé trạm trả khách khi xe đầy."},{"size":9,"cap":2,"buses":[{"id":"A","color":"blue","start":[5,8],"end":[1,0],"solution":[[5,8],[5,7],[5,6],[5,5],[5,4],[5,3],[1,4],[1,3],[1,2],[1,1],[1,0]],"cap":1},{"id":"B","color":"yellow","start":[3,0],"end":[8,3],"solution":[[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],[8,1],[8,2],[8,3]],"cap":2},{"id":"C","color":"orange","start":[8,8],"end":[0,2],"solution":[[8,8],[8,7],[8,6],[8,5],[8,4],[7,4],[5,2],[4,2],[3,2],[2,2],[1,2],[0,2]],"cap":2},{"id":"D","color":"purple","start":[4,8],"end":[0,4],"solution":[[4,8],[3,8],[2,8],[1,8],[0,8],[0,7],[0,6],[0,5],[0,4]],"cap":2}],"pickups":[{"at":[4,7],"color":"blue","count":1},{"at":[6,4],"color":"blue","count":1},{"at":[2,3],"color":"blue","count":1},{"at":[7,1],"color":"yellow","count":2},{"at":[7,8],"color":"orange","count":2},{"at":[7,5],"color":"orange","count":2},{"at":[2,1],"color":"orange","count":2},{"at":[1,7],"color":"purple","count":1},{"at":[3,7],"color":"purple","count":1}],"stations":[{"at":[4,6],"color":"blue"},{"at":[1,5],"color":"blue"},[0,1],{"at":[7,3],"color":"yellow"},{"at":[7,6],"color":"orange"},{"at":[6,2],"color":"orange"},{"at":[0,3],"color":"purple"}],"blocks":[[6,1],[3,3],[6,3],[3,5],[1,6],[6,6],[7,7]],"cross":[[1,2]],"tp":[{"a":[5,3],"b":[1,4]},{"a":[7,4],"b":[5,2]}],"name":"Màn 46","tip":"Đón đủ khách rồi về cổng nhé!"},{"size":9,"cap":3,"buses":[{"id":"A","color":"orange","start":[0,8],"end":[8,8],"solution":[[0,8],[1,8],[2,8],[3,8],[4,8],[5,8],[6,8],[7,8],[8,8]],"cap":1},{"id":"B","color":"green","start":[0,2],"end":[8,6],"solution":[[0,2],[1,2],[2,2],[3,2],[4,2],[5,2],[6,6],[7,6],[8,6]],"cap":1},{"id":"C","color":"purple","start":[7,0],"end":[0,1],"solution":[[7,0],[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[7,5],[6,5],[5,5],[5,1],[4,1],[3,1],[2,1],[1,1],[0,1]],"cap":3},{"id":"D","color":"red","start":[0,0],"end":[0,4],"solution":[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0],[6,0],[6,1],[6,2],[6,3],[6,4],[5,4],[4,4],[3,4],[2,4],[1,4],[0,4]],"cap":3}],"pickups":[{"at":[1,7],"color":"orange","count":1},{"at":[3,7],"color":"orange","count":1},{"at":[6,7],"color":"orange","count":1},{"at":[1,3],"color":"green","count":1},{"at":[4,3],"color":"green","count":1},{"at":[5,6],"color":"green","count":1},{"at":[7,3],"color":"purple","count":3},{"at":[7,1],"color":"red","count":3}],"stations":[[2,7],[5,7],[8,7],{"at":[2,3],"color":"green"},{"at":[5,3],"color":"green"},[4,5]],"blocks":[[7,4],[0,5],[2,6],[3,6]],"cross":[],"tp":[{"a":[5,2],"b":[6,6]},{"a":[5,5],"b":[5,1]}],"name":"Màn 47","tip":"Tìm đường cho từng xe!"},{"size":9,"cap":2,"buses":[{"id":"A","color":"yellow","start":[5,0],"end":[8,5],"solution":[[5,0],[6,0],[7,0],[8,0],[8,1],[8,2],[8,3],[8,4],[8,5]],"cap":2},{"id":"B","color":"blue","start":[5,8],"end":[0,5],"solution":[[5,8],[6,8],[7,8],[8,8],[8,7],[8,6],[7,6],[6,6],[2,5],[1,5],[0,5]],"cap":2},{"id":"C","color":"orange","start":[2,8],"end":[1,0],"solution":[[2,8],[1,8],[0,8],[0,7],[0,6],[1,6],[2,6],[3,6],[4,6],[5,6],[5,5],[5,4],[5,3],[5,2],[5,1],[1,4],[1,3],[1,2],[1,1],[1,0]],"cap":2},{"id":"D","color":"teal","start":[4,0],"end":[4,8],"solution":[[4,0],[4,1],[4,2],[4,3],[4,4],[4,5],[4,6],[4,7],[4,8]],"cap":2}],"pickups":[{"at":[6,1],"color":"yellow","count":1},{"at":[7,1],"color":"yellow","count":1},{"at":[6,7],"color":"blue","count":1},{"at":[5,7],"color":"blue","count":1},{"at":[7,5],"color":"blue","count":2},{"at":[1,7],"color":"orange","count":1},{"at":[3,8],"color":"orange","count":1},{"at":[3,1],"color":"teal","count":1},{"at":[3,0],"color":"teal","count":1},{"at":[3,4],"color":"teal","count":2}],"stations":[[7,2],{"at":[7,7],"color":"blue"},[2,4],{"at":[3,3],"color":"teal"},[3,7]],"blocks":[[0,0],[0,3],[6,3],[7,4],[3,5]],"cross":[[4,6]],"tp":[{"a":[6,6],"b":[2,5]},{"a":[5,1],"b":[1,4]}],"name":"Màn 48","tip":"Đón đủ khách rồi về cổng nhé!"},{"size":9,"cap":3,"buses":[{"id":"A","color":"pink","start":[0,4],"end":[4,8],"solution":[[0,4],[0,5],[0,6],[0,7],[0,8],[1,8],[2,8],[3,8],[4,8]],"cap":2},{"id":"B","color":"yellow","start":[6,8],"end":[0,1],"solution":[[6,8],[6,7],[6,6],[1,3],[1,2],[1,1],[1,0],[0,0],[0,1]],"cap":2},{"id":"C","color":"green","start":[5,8],"end":[5,0],"solution":[[5,8],[5,7],[5,6],[5,5],[5,4],[5,3],[5,2],[5,1],[5,0]],"cap":3},{"id":"D","color":"purple","start":[6,0],"end":[8,6],"solution":[[6,0],[7,0],[8,0],[8,1],[8,2],[8,3],[8,4],[8,5],[8,6]],"cap":2}],"pickups":[{"at":[1,7],"color":"pink","count":2},{"at":[7,7],"color":"yellow","count":2},{"at":[2,2],"color":"yellow","count":2},{"at":[2,0],"color":"yellow","count":2},{"at":[4,7],"color":"green","count":3},{"at":[4,5],"color":"green","count":3},{"at":[6,2],"color":"green","count":3},{"at":[7,2],"color":"purple","count":1},{"at":[7,1],"color":"purple","count":1}],"stations":[[3,7],{"at":[7,6],"color":"yellow"},[2,1],{"at":[0,2],"color":"yellow"},[4,6],{"at":[4,3],"color":"green"},{"at":[4,0],"color":"green"},{"at":[8,7],"color":"purple"}],"blocks":[[4,1],[0,3],[3,4],[1,5],[7,5],[8,8]],"cross":[],"tp":[{"a":[6,6],"b":[1,3]}],"name":"Màn 49","tip":"Ghé trạm trả khách khi xe đầy."},{"size":9,"cap":3,"buses":[{"id":"A","color":"green","start":[2,0],"end":[8,2],"solution":[[2,0],[3,0],[4,0],[5,0],[6,0],[7,0],[8,0],[8,1],[8,2]],"cap":2},{"id":"B","color":"blue","start":[2,8],"end":[0,2],"solution":[[2,8],[1,8],[0,8],[0,7],[0,6],[0,5],[0,4],[0,3],[0,2]],"cap":2},{"id":"C","color":"teal","start":[6,8],"end":[8,7],"solution":[[6,8],[6,7],[6,6],[4,4],[4,3],[4,2],[4,1],[5,1],[6,1],[7,1],[7,2],[7,3],[7,4],[7,5],[7,6],[7,7],[7,8],[8,8],[8,7]],"cap":2},{"id":"D","color":"red","start":[0,0],"end":[8,5],"solution":[[0,0],[1,0],[1,1],[1,5],[1,6],[1,7],[2,7],[3,7],[4,7],[5,7],[5,6],[5,5],[5,4],[5,3],[5,2],[6,2],[6,3],[6,4],[6,5],[7,5],[8,5]],"cap":3}],"pickups":[{"at":[3,1],"color":"green","count":2},{"at":[3,8],"color":"blue","count":2},{"at":[3,3],"color":"teal","count":1},{"at":[5,8],"color":"teal","count":1},{"at":[2,5],"color":"red","count":1},{"at":[1,4],"color":"red","count":2}],"stations":[{"at":[8,3],"color":"green"},{"at":[0,1],"color":"blue"},[8,6]],"blocks":[[2,1],[3,2],[8,4],[4,8]],"cross":[[7,5]],"tp":[{"a":[6,6],"b":[4,4]},{"a":[1,1],"b":[1,5]}],"name":"Màn 50","tip":"Đừng để khách bị bỏ lại!"}]);
+// Button & gate levels (2026-11-10): a gate stays closed until any bus drives over its button.
+LEVELS.push(
+  { name: 'Nút bấm mở cổng', size: 5, cap: 1,
+    buses: [{ id: 'A', color: 'blue', start: [0, 2], end: [4, 2], solution: [[0,2],[0,1],[0,0],[1,0],[1,1],[1,2],[2,2],[3,2],[4,2]] }],
+    pickups: [{ at: [1, 3], color: 'blue', count: 1 }], stations: [[3, 3]], blocks: [[2, 0], [2, 1], [2, 3], [2, 4]],
+    gates: [{ at: [2, 2], button: [1, 0] }],
+    tip: 'Cổng đóng! Cho xe chạy qua nút 🔘 cùng màu để mở cổng' },
+  { name: 'Mở cổng giúp bạn', size: 6, cap: 1,
+    buses: [
+      { id: 'A', color: 'red', start: [0, 0], end: [5, 0], solution: [[0,0],[1,0],[2,0],[3,0],[4,0],[4,1],[5,1],[5,0]] },
+      { id: 'B', color: 'green', start: [0, 5], end: [5, 5], solution: [[0,5],[1,5],[2,5],[3,5],[4,5],[5,5]] }],
+    pickups: [{ at: [1, 1], color: 'red', count: 1 }, { at: [1, 4], color: 'green', count: 1 }],
+    stations: [[2, 1], [4, 4]], blocks: [[3, 1], [3, 2], [3, 3], [3, 4]],
+    gates: [{ at: [3, 5], button: [4, 1] }],
+    tip: 'Xe này có thể bấm nút mở cổng cho xe kia!' },
+  { name: 'Hai cổng hai nút', size: 7, cap: 1,
+    buses: [
+      { id: 'A', color: 'orange', start: [0, 1], end: [6, 1], solution: [[0,1],[1,1],[2,1],[3,1],[4,1],[4,2],[5,2],[6,2],[6,1]] },
+      { id: 'B', color: 'purple', start: [0, 5], end: [6, 5], solution: [[0,5],[0,4],[1,4],[2,4],[2,5],[3,5],[4,5],[5,5],[6,5]] }],
+    pickups: [{ at: [1, 0], color: 'orange', count: 1 }, { at: [2, 6], color: 'purple', count: 1 }],
+    stations: [[5, 1], [5, 6]], blocks: [[3, 0], [3, 2], [3, 3], [3, 4], [3, 6]],
+    gates: [{ at: [3, 1], button: [1, 4] }, { at: [3, 5], button: [5, 2] }],
+    tip: 'Hai xe mở cổng cho nhau — ai bấm nút trước?' }
+);
 LEVELS.forEach(q => {
+  q.gates = q.gates || [];
   q.stationColors = q.stations.map(s => Array.isArray(s) ? null : (s.color || null));
   q.stations = q.stations.map(s => Array.isArray(s) ? s : s.at);
   q.cross = q.cross || []; q.tp = q.tp || [];
@@ -468,6 +540,22 @@ const capOf = (q, b) => b.cap || q.cap;
 const stationOK = (q, k, bus) => !q.stationColors[k] || q.stationColors[k] === bus.color;
 const isCross = (q, p) => q.cross.some(c => c[0] === p[0] && c[1] === p[1]);
 const pairOf = (q, p) => { for (const t of q.tp) { if (t.a[0] === p[0] && t.a[1] === p[1]) return t.b; if (t.b[0] === p[0] && t.b[1] === p[1]) return t.a; } return null; };
+const gateAt = (q, p) => q.gates.findIndex(g => g.at[0] === p[0] && g.at[1] === p[1]);
+/* Gate rule: a bus never enters a closed gate cell; it waits on the cell before it. Buttons open gates
+   for good, so the result does not depend on timing: run every bus as far as it can, repeat until
+   nothing moves. Returns the per-bus index reached (all at route end = no deadlock). */
+function gateReach(q, routes) {
+  const open = q.gates.map(() => false), pos = routes.map(() => 0);
+  const press = p => q.gates.forEach((g, k) => { if (g.button[0] === p[0] && g.button[1] === p[1]) open[k] = true; });
+  routes.forEach(r => press(r[0]));
+  for (let moved = true; moved;) {
+    moved = false;
+    routes.forEach((r, i) => {
+      while (pos[i] < r.length - 1) { const k = gateAt(q, r[pos[i] + 1]); if (k >= 0 && !open[k]) break; pos[i]++; press(r[pos[i]]); moved = true; }
+    });
+  }
+  return pos;
+}
 const isJump = (route, i) => i + 1 < route.length && Math.abs(route[i][0] - route[i + 1][0]) + Math.abs(route[i][1] - route[i + 1][1]) !== 1;
 
 /* =========================================================
@@ -523,20 +611,100 @@ const shade = (c, t) => new THREE.Color(c).multiplyScalar(t).getHex();
 /* =========================================================
    AUDIO — tiny synth, no assets needed
    ========================================================= */
-let AC = null, muted = store.get('bl_mute', false);
-function audio() { if (!AC) { try { AC = new (window.AudioContext || window.webkitAudioContext)(); } catch {} } if (AC && AC.state === 'suspended') AC.resume(); }
-function tone(f, d = 0.08, type = 'sine', v = 0.1, f2 = 0, delay = 0) {
-  if (muted || !AC) return;
+/* Audio graph: every SFX -> sfxBus, background music -> musicBus, both -> master -> speakers.
+   Two independent switches in Settings: "Hiệu ứng" (muted) and "Nhạc nền" (musicOn). */
+let AC = null, muted = store.get('bl_mute', false), musicOn = store.get('bl_music', true);
+let sfxBus = null, musicBus = null;
+function audio() {
+  if (!AC) {
+    try {
+      AC = new (window.AudioContext || window.webkitAudioContext)();
+      const master = AC.createGain(); master.gain.value = 0.9;
+      const comp = AC.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 3;
+      master.connect(comp).connect(AC.destination);
+      sfxBus = AC.createGain(); sfxBus.connect(master);
+      musicBus = AC.createGain(); musicBus.gain.value = 0; musicBus.connect(master);
+    } catch { AC = null; }
+  }
+  if (AC && AC.state === 'suspended') AC.resume();
+  Music.sync();
+}
+function tone(f, d = 0.08, type = 'sine', v = 0.1, f2 = 0, delay = 0, out = null) {
+  if (!AC || (!out && muted)) return;
   const t = AC.currentTime + delay, o = AC.createOscillator(), g = AC.createGain();
   o.type = type; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
   g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
-  o.connect(g).connect(AC.destination); o.start(t); o.stop(t + d + 0.03);
+  o.connect(g).connect(out || sfxBus); o.start(t); o.stop(t + d + 0.03);
 }
+let noiseBuf = null;
+function noise(d, v, fc, delay = 0, out = null, q = 0.8, fc2 = 0) {
+  if (!AC || (!out && muted)) return;
+  if (!noiseBuf) { noiseBuf = AC.createBuffer(1, AC.sampleRate, AC.sampleRate); const ch = noiseBuf.getChannelData(0); for (let i = 0; i < ch.length; i++) ch[i] = Math.random() * 2 - 1; }
+  const t = AC.currentTime + delay, s = AC.createBufferSource(), f = AC.createBiquadFilter(), g = AC.createGain();
+  s.buffer = noiseBuf; f.type = 'bandpass'; f.frequency.setValueAtTime(fc, t); if (fc2) f.frequency.exponentialRampToValueAtTime(fc2, t + d); f.Q.value = q;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+  s.connect(f).connect(g).connect(out || sfxBus); s.start(t, Math.random() * 0.5); s.stop(t + d + 0.03);
+}
+// Major pentatonic: any sequence of these notes sounds pleasant, so drawing a road "plays a tune".
+const PENTA = [0, 2, 4, 7, 9];
+const BUS_ROOT = [523.25, 587.33, 659.25, 698.46];   // C5, D5, E5, F5 — each bus in a level gets its own key
+const pentaHz = (root, n) => { const k = ((n % 10) + 10) % 10; return root * Math.pow(2, (PENTA[k % 5] + 12 * Math.floor(k / 5)) / 12); };
+// Bus horn: two detuned square/saw voices through a low-pass -> warm "toy horn". Pitch by size.
+function horn(cap, delay = 0, short = false) {
+  if (muted || !AC) return;
+  const kind = cap <= 1 ? 0 : cap === 2 ? 1 : 2;
+  const base = [660, 466, 311][kind], beeps = short ? 2 : [2, 1, 1][kind], len = short ? 0.09 : [0.1, 0.26, 0.42][kind];
+  for (let b = 0; b < beeps; b++) {
+    const t = AC.currentTime + delay + b * (len + 0.07);
+    const f = AC.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1800 + kind * -300; f.Q.value = 2;
+    const g = AC.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.06, t + 0.015);
+    g.gain.setValueAtTime(0.06, t + len - 0.03); g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+    f.connect(g).connect(sfxBus);
+    for (const [mul, type] of [[1, 'square'], [1.26, 'sawtooth']]) {   // root + major third
+      const o = AC.createOscillator(); o.type = type; o.frequency.setValueAtTime(base * mul, t);
+      o.frequency.linearRampToValueAtTime(base * mul * 0.985, t + len); o.connect(f); o.start(t); o.stop(t + len + 0.02);
+    }
+  }
+}
+/* Background music: tiny step sequencer (I–V–vi–IV in C, 100 BPM) scheduled ahead on the audio clock.
+   Run mode adds a shaker so the race feels busier. */
+const Music = (() => {
+  const BPM = 100, STEP = 60 / BPM / 2;   // 8th notes
+  const CH = [[0, 4, 7], [7, 11, 14], [9, 12, 16], [5, 9, 12]];   // C, G, Am, F (semitones from C4)
+  const MEL = [12, -1, 16, 14, 12, -1, 9, -1,  14, -1, 19, -1, 16, 14, -1, -1,  16, -1, 12, 14, 16, -1, 21, -1,  17, 16, 14, -1, 12, -1, -1, -1];
+  const C4 = 261.63, hz = s => C4 * Math.pow(2, s / 12);
+  let timer = null, next = 0, step = 0;
+  function sched() {
+    while (next < AC.currentTime + 0.25) {
+      const bar = Math.floor(step / 8) % 4, s = step % 8, ch = CH[bar], t = next - AC.currentTime;
+      if (s === 0 || s === 4) tone(hz(ch[0] - 12), 0.32, 'triangle', 0.09, 0, t, musicBus);           // bass
+      if (s % 2 === 1) tone(hz(ch[(s >> 1) % 3]), 0.16, 'sine', 0.035, 0, t, musicBus);                 // soft arpeggio
+      const m = MEL[step % 32]; if (m >= 0) tone(hz(m), 0.22, 'triangle', 0.045, 0, t, musicBus);       // melody
+      if (mode === 'run' || s === 2 || s === 6) noise(0.05, mode === 'run' ? 0.03 : 0.018, 7000, t, musicBus, 1.2);   // shaker
+      next += STEP; step++;
+    }
+  }
+  return {
+    sync() {
+      if (!AC) return;
+      const want = musicOn && !document.hidden;
+      musicBus.gain.setTargetAtTime(want ? 0.55 : 0, AC.currentTime, 0.25);
+      if (want && !timer) { next = AC.currentTime + 0.1; timer = setInterval(sched, 90); }
+      if (!want && timer) setTimeout(() => { if (!(musicOn && !document.hidden) && timer) { clearInterval(timer); timer = null; } }, 900);
+    }
+  };
+})();
+document.addEventListener('visibilitychange', () => { if (AC) { if (document.hidden) AC.suspend(); else AC.resume(); } Music.sync(); });
 const SFX = {
-  step: n => tone(420 + Math.min(n, 22) * 26, 0.06, 'triangle', 0.07),
+  step: (n, bus = sel) => { const f = pentaHz(BUS_ROOT[bus % 4], n); tone(f, 0.11, 'triangle', 0.075); tone(f * 2, 0.07, 'sine', 0.025, 0, 0.005); },
+  back: (n, bus = sel) => tone(pentaHz(BUS_ROOT[bus % 4], n) * 0.75, 0.07, 'sine', 0.05),
   bad: () => tone(200, 0.16, 'square', 0.04, 110),
   done: () => { tone(660, 0.1, 'triangle', 0.1); tone(990, 0.16, 'triangle', 0.1, 0, 0.09); },
-  hop: () => tone(520 + Math.random() * 260, 0.08, 'sine', 0.06, 1100),
+  hop: (k = Math.random() * 6) => { const f = pentaHz(659.25, Math.round(k)); tone(f, 0.09, 'sine', 0.06); tone(f * 1.5, 0.06, 'sine', 0.02, 0, 0.03); },
+  happy: () => { tone(880, 0.07, 'sine', 0.04, 1175); tone(1320, 0.09, 'sine', 0.035, 1760, 0.06); },
+  click: () => { noise(0.04, 0.08, 2500); tone(1500, 0.05, 'square', 0.03, 900); },
+  gate: () => { tone(392, 0.12, 'triangle', 0.07); tone(523, 0.12, 'triangle', 0.07, 0, 0.1); tone(784, 0.2, 'triangle', 0.08, 0, 0.2); },
+  whoosh: () => noise(0.45, 0.07, 400, 0, null, 0.9, 3200),
   drop: () => { tone(880, 0.08, 'sine', 0.07, 1320); },
   coin: () => { tone(1320, 0.05, 'square', 0.025); tone(1760, 0.08, 'square', 0.025, 0, 0.05); },
   go: () => { tone(260, 0.22, 'sawtooth', 0.035, 520); tone(390, 0.22, 'triangle', 0.05, 780, 0.05); },
@@ -552,16 +720,17 @@ const buzz = ms => { if (!vibOn) return; try { navigator.vibrate && navigator.vi
    ========================================================= */
 let lvl = clamp(store.get('bl_lvl', 0), 0, LEVELS.length - 1), L = null;
 let coins = store.get('bl_coins', 120);
-let theme = 'clean';
+let theme = 'city';
 let paths = [], sel = 0, mode = 'draw', drawing = false, pid = null, lastXY = null, lastBad = null;
 let hint = false, hintUsed = false, demoUsed = false, demoQ = null, autoT = null, endT = null;
 let taken = [], delivered = 0, shown = 0, shownPeople = 0, total = 0, runners = [], speed = 1;
 let pickVis = [], stationVis = [], exitVis = [], busVis = [], routeObjs = [], blockVis = [], ambient = [], flags = [];
 let jumpers = [], cheer = [], fx = [];
+let gateVis = [], buttonVis = [], gateOpen = [], deadT = 0;
 let idleT = 0, T = 0;
 
 /* three core */
-let effect, scene, renderer, camera, raycaster, sun, root, chevronTex;
+let effect, scene, renderer, camera, raycaster, hemi, sun, root, chevronTex;
 const clock = new THREE.Clock();
 const plane0 = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
@@ -587,7 +756,8 @@ function init() {
   raycaster = new THREE.Raycaster();
 
   effect = new OutlineEffect(renderer, { defaultThickness: 0.003, defaultColor: [0, 0, 0], defaultAlpha: 0 });
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xffe2d2, 1.15));
+  hemi = new THREE.HemisphereLight(0xffffff, 0xffe2d2, 1.15);
+  scene.add(hemi);
   sun = new THREE.DirectionalLight(0xfff4e6, 1.7);
   sun.position.set(-4, 12, 6);
   sun.castShadow = true;
@@ -682,7 +852,7 @@ function refreshUI() {
   $('cntText').textContent = `${shownPeople}/${total * perUnit()}`;
   $('frame').classList.toggle('at-home', !$('home').classList.contains('hidden'));
   $('homeCoins').textContent = coins; $('homeLvl').textContent = 'Màn ' + (lvl + 1);
-  $('swSound').classList.toggle('on', !muted); $('swVib').classList.toggle('on', vibOn);
+  $('swSound').classList.toggle('on', !muted); $('swMusic').classList.toggle('on', musicOn); $('swVib').classList.toggle('on', vibOn);
   $('hint').classList.toggle('on', hint);
   const p = $('play');
   p.classList.remove('ready', 'off', 'run');
@@ -698,27 +868,39 @@ function bump(id) { const e = $(id); e.classList.remove('bump'); void e.offsetWi
 function clearScene() {
   while (root.children.length) { const c = root.children[0]; root.remove(c); disposeObj(c); }
   pickVis = []; stationVis = []; exitVis = []; busVis = []; routeObjs = []; blockVis = []; ambient = []; flags = [];
-  jumpers = []; cheer = []; fx = [];
+  jumpers = []; cheer = []; fx = []; gateVis = []; buttonVis = [];
 }
 let session = 0;
 function later(fn, ms) { const s = session; return setTimeout(() => { if (s === session) fn(); }, ms); }
 function reset(i = lvl) {
   session++;
   clearTimeout(autoT); clearTimeout(endT); autoT = endT = null;
+  const previousTheme = L ? theme : null;
   lvl = (i + LEVELS.length) % LEVELS.length; L = LEVELS[lvl];
+  theme = WORLD_THEMES[Math.floor(lvl / 10) % 5];
   store.set('bl_lvl', lvl);
-  $('frame').style.background = THEMES[theme].bg;
+  const palette = THEMES[theme];
+  $('frame').style.background = palette.bg;
+  hemi.color.setHex(palette.hemiSky); hemi.groundColor.setHex(palette.hemiGround);
+  hemi.intensity = palette.hemiIntensity;
+  sun.color.setHex(palette.sunColor); sun.intensity = palette.sunIntensity;
   paths = L.buses.map(b => [b.start.slice()]);
   sel = 0; mode = 'draw'; drawing = false; hint = false; hintUsed = false; demoUsed = false; demoQ = null; speed = 1;
   taken = L.pickups.map(() => 0); delivered = 0; shown = 0; shownPeople = 0; runners = []; idleT = 0;
+  gateOpen = L.gates.map(() => false); deadT = 0;
   total = L.pickups.reduce((s, p) => s + p.count, 0);
   $('modal').classList.add('hidden');
   clearScene();
   buildWorld();
   fit();
   onPathsChanged();
-  toast(L.tip);
-  $('toast').className = 'toast panel';
+  toast(L.tip); $('toast').className = 'toast panel';
+  if (previousTheme && previousTheme !== theme) {
+    toast(`Thế giới mới: ${palette.icon} ${palette.name}`, 'good');
+    later(() => { if (mode === 'draw') { toast(L.tip); $('toast').className = 'toast panel'; } }, 2200);
+  }
+  root.position.y = 0.8; root.scale.setScalar(0.86);
+  root.userData.intro = 1;
 }
 
 /* ---------- board (minimal, clean) ---------- */
@@ -733,7 +915,7 @@ function buildWorld() {
   const n = L.size, T = THEMES[theme];
   const sh = mk(new THREE.PlaneGeometry(n + 3.4, n + 3.4), new THREE.MeshBasicMaterial({ map: softShadowTex(), transparent: true, depthWrite: false }), root, 0.3, -0.5, 0.55, false);
   sh.rotation.x = -Math.PI / 2;
-  mk(RB(n + 0.62, 0.22, n + 0.62, 0.26), M(0xe0a98a, 0.7), root, 0, -0.3, 0);
+  mk(RB(n + 0.62, 0.22, n + 0.62, 0.26), M(T.rim, 0.7), root, 0, -0.3, 0);
   mk(RB(n + 0.5, 0.36, n + 0.5, 0.22), M(T.plateau, 0.6), root, 0, -0.18, 0);
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
     const w = W([x, y]);
@@ -743,8 +925,20 @@ function buildWorld() {
   L.stations.forEach((p, i) => { createStation(p, i); const c = L.stationColors[i]; if (c) { const st = stationVis[i]; paintStation(st, c); st.open = 0; mk(CYL(0.17, 0.2, 0.04, 24), M(COLORS[c]), st.g, 0, 0.02, 0); } });
   L.cross.forEach(p => createCross(p));
   L.tp.forEach((tp, k) => { createPortal(tp.a, k); createPortal(tp.b, k); });
+  L.gates.forEach((g, k) => { createButton(g, k); createGate(g, k); });
   L.pickups.forEach((p, i) => createPickup(p, i));
   L.buses.forEach((b, i) => { createExit(b, i); createBus(b, i); });
+  if (theme === 'snow' || theme === 'sunset') {
+    const snow = theme === 'snow', count = snow ? 40 : 16, bound = n / 2 - 0.24;
+    for (let i = 0; i < count; i++) {
+      const mat = new THREE.MeshBasicMaterial({ color: snow ? 0xffffff : 0xffdc73, transparent: true, opacity: snow ? 0.9 : 0.7, depthWrite: false });
+      const x = (Math.random() * 2 - 1) * bound, z = (Math.random() * 2 - 1) * bound;
+      const y = snow ? 0.12 + Math.random() * 2.6 : 0.5 + Math.random() * 1.3;
+      const obj = mk(SPH(snow ? 0.022 : 0.028, 6, 4), mat, root, x, y, z, false);
+      obj.receiveShadow = false;
+      ambient.push({ type: snow ? 'snow' : 'firefly', obj, x, y, z, phase: Math.random() * Math.PI * 2, speed: 0.35 + Math.random() * 0.35 });
+    }
+  }
 }
 
 /* ---------- overpass: z-direction drives over the bridge, x-direction passes underneath ---------- */
@@ -793,11 +987,114 @@ function tpFx(a, b) {
   tone(500, 0.18, 'sine', 0.07, 1400); tone(1400, 0.2, 'sine', 0.05, 600, 0.12);
 }
 
-/* ---------- obstacle: soft rounded block ---------- */
+/* ---------- button & gate: each pair shares a key colour, dotted trail links them while drawing ---------- */
+const GATE_COLORS = [0xffb300, 0x00a8ff, 0xff4fa0];
+function createButton(gate, k) {
+  const col = GATE_COLORS[k % GATE_COLORS.length];
+  const g = new THREE.Group(); g.position.copy(W(gate.button)); root.add(g);
+  // pair is identified by colour alone: button and gate share GATE_COLORS[k]
+  mk(CYL(0.25, 0.27, 0.04, 28), M(shade(col, 0.6)), g, 0, 0.02, 0, false);
+  const cap = mk(CYL(0.19, 0.21, 0.09, 28), M(col, 0.35), g, 0, 0.06, 0);
+  const glow = mk(RING(0.3, 0.38), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0, depthWrite: false }), g, 0, 0.02, 0, false);
+  buttonVis.push({ g, cap, glow, pressed: 0, covered: false, k });
+}
+function createGate(gate, k) {
+  const col = GATE_COLORS[k % GATE_COLORS.length];
+  const g = new THREE.Group(); g.position.copy(W(gate.at)); root.add(g);
+  // the arm must lie across the road: find which way the sample solution drives through this cell
+  let alongX = false;
+  for (const b of L.buses) { const i = b.solution.findIndex(c => eq(c, gate.at)); if (i > 0) { alongX = b.solution[i - 1][1] === gate.at[1]; break; } }
+  g.rotation.y = alongX ? Math.PI / 2 : 0;          // local z = travel direction, local x = across the road
+  const pm = M(col, 0.4);
+  mk(RB(0.2, 0.06, 0.2, 0.05), M(0x8f98a8), g, -0.42, 0.03, 0);
+  mk(RB(0.11, 0.44, 0.11, 0.05), pm, g, -0.42, 0.25, 0);
+  mk(RB(0.09, 0.26, 0.09, 0.04), pm, g, 0.42, 0.13, 0);
+  const pivot = new THREE.Group(); pivot.position.set(-0.42, 0.36, 0); g.add(pivot);
+  mk(RB(0.86, 0.09, 0.09, 0.04), pm, pivot, 0.45, 0, 0);                         // arm in the key colour
+  for (const x of [0.3, 0.62]) mk(RB(0.09, 0.096, 0.096, 0.03), M(0xffffff, 0.5), pivot, x, 0, 0, false);   // white stripes
+  gateVis.push({ g, pivot, lift: 0, vel: 0, shake: 0, willOpen: false, k });
+}
+function pressButtons(p) {
+  L.gates.forEach((gt, k) => {
+    if (gateOpen[k] || !eq(gt.button, p)) return;
+    gateOpen[k] = true; buttonVis[k].pressed = 1;
+    SFX.click(); later(() => SFX.gate(), 180);
+    const col = GATE_COLORS[k % GATE_COLORS.length];
+    ringFx(W(gt.button), col, 1.3, 0.5);
+    later(() => { sparkle(W(gt.at), col, 14); floatLabel(W(gt.at).setY(1.1), 'MỞ!', '#2fcf55'); }, 220);
+  });
+}
+function updateGates(dt) {
+  for (const v of gateVis) {
+    const want = mode !== 'draw' && gateOpen[v.k] ? 1 : 0;
+    v.vel += ((want - v.lift) * 90 - v.vel * 11) * dt; v.lift += v.vel * dt;      // springy boom arm
+    v.pivot.rotation.z = clamp(v.lift, -0.1, 1.15) * 1.35;
+    if (v.shake > 0) { v.shake -= dt; v.g.position.y = Math.abs(Math.sin(T * 30)) * 0.03 * v.shake; } else v.g.position.y = 0;
+  }
+  for (const b of buttonVis) {
+    const down = mode !== 'draw' && gateOpen[b.k];
+    b.cap.position.y = lerp(b.cap.position.y, down ? 0.025 : 0.06, 1 - Math.exp(-dt * 18));
+    const hot = mode === 'draw' && b.covered;
+    b.glow.material.opacity = hot ? 0.45 + 0.3 * Math.sin(T * 6) : (down ? 0.35 : 0);
+  }
+}
+
+/* ---------- obstacle: a little patch of ground with a tree, rocks, or both ----------
+   Variant is picked from the cell position, so a level always looks the same but the board is varied.
+   Height stays <= ~0.7 so buses and passengers behind it remain visible. */
+const NATURE = {
+  city:   { ground: 0x9ad870, side: 0x6fb152, tree: 'round', leaf: [0x43b85a, 0x5fcf6a, 0x7ee07a], rock: [0xa9adbb, 0xc6c9d4], flower: [0xff6fa8, 0xffd84a, 0xffffff] },
+  beach:  { ground: 0xffe2a0, side: 0xe9c27a, tree: 'palm',  leaf: [0x3fb862, 0x5acc6f, 0x7ad97c], rock: [0xc9b49a, 0xe0cfb5], flower: [0xff8a5c, 0xffffff, 0xffc0d8] },
+  forest: { ground: 0x7fc461, side: 0x5a9a45, tree: 'pine',  leaf: [0x2f8a4c, 0x3fa35c, 0x5cbf6e], rock: [0x8f978f, 0xaab2a6], flower: [0xffe066, 0xff8fb8, 0xffffff] },
+  snow:   { ground: 0xf4fbff, side: 0xbcdcf2, tree: 'pine',  leaf: [0x3d8f6a, 0x4ea57a, 0x67b98c], rock: [0x9fb6c9, 0xc4d8e8], flower: null, snowy: true },
+  sunset: { ground: 0xf3b98f, side: 0xd18d6e, tree: 'round', leaf: [0xff8a5c, 0xffa86b, 0xffc477], rock: [0xa88aa8, 0xc4a6c0], flower: [0xffe49a, 0xff6fa8, 0xffffff] }
+};
+function natureTree(g, N, x, z, s) {
+  const t = new THREE.Group(); t.position.set(x, 0.1, z); t.scale.setScalar(s); g.add(t);
+  const crown = new THREE.Group(); t.add(crown); crown.userData.sway = Math.random() * 6;
+  ambient.push({ type: 'sway', obj: crown });
+  if (N.tree === 'round') {
+    mk(CYL(0.045, 0.07, 0.26, 10), M(0x9a6a45), t, 0, 0.13, 0);
+    mk(SPH(0.21, 16, 12), M(N.leaf[0], 0.6), crown, 0, 0.42, 0);
+    mk(SPH(0.15, 14, 10), M(N.leaf[1], 0.6), crown, 0.13, 0.36, 0.06);
+    mk(SPH(0.13, 14, 10), M(N.leaf[2], 0.6), crown, -0.11, 0.38, -0.07);
+    mk(SPH(0.11, 12, 8), M(N.leaf[1], 0.6), crown, 0.02, 0.56, 0.02);
+  } else if (N.tree === 'pine') {
+    mk(CYL(0.04, 0.06, 0.16, 8), M(0x8a5d3d), t, 0, 0.08, 0);
+    [[0.25, 0.26, 0.24], [0.2, 0.24, 0.39], [0.14, 0.22, 0.53]].forEach(([r, h, y], k) => {
+      mk(CYL(0.001, r, h, 12), M(N.leaf[k], 0.6), crown, 0, y, 0);
+      if (N.snowy) mk(CYL(0.001, r * 0.55, h * 0.45, 12), M(0xffffff, 0.5), crown, 0, y + h * 0.3, 0);
+    });
+  } else {   // palm: leaning segmented trunk + drooping fronds + coconuts
+    const trunk = new THREE.Group(); trunk.rotation.z = 0.18; t.add(trunk);
+    for (let k = 0; k < 4; k++) mk(CYL(0.045 - k * 0.004, 0.055 - k * 0.004, 0.11, 8), M(k % 2 ? 0xb0844f : 0x9a7040), trunk, 0, 0.055 + k * 0.105, 0);
+    crown.position.set(-0.08, 0.44, 0);
+    for (let k = 0; k < 5; k++) {
+      const a = k * Math.PI * 2 / 5, f = new THREE.Group(); f.rotation.y = a; crown.add(f);
+      const leaf = mk(RB(0.3, 0.025, 0.09, 0.012), M(N.leaf[k % 3], 0.6), f, 0.14, -0.03, 0); leaf.rotation.z = -0.45;
+    }
+    for (let k = 0; k < 2; k++) mk(SPH(0.04, 10, 8), M(0x7a5230), crown, 0.03 - k * 0.06, -0.04, k ? -0.03 : 0.03);
+  }
+}
+function natureRocks(g, N, x, z, s) {
+  const r = new THREE.Group(); r.position.set(x, 0.1, z); r.scale.setScalar(s); g.add(r);
+  const a = mk(DOD(0.16), M(N.rock[0], 0.8), r, 0, 0.1, 0); a.scale.set(1.1, 0.75, 1); a.rotation.set(0.3, 0.6, 0.1);
+  const b = mk(DOD(0.1), M(N.rock[1], 0.8), r, 0.17, 0.06, 0.1); b.scale.set(1, 0.8, 1.1); b.rotation.set(0.5, 1.2, 0);
+  const c = mk(DOD(0.065), M(N.rock[1], 0.8), r, -0.1, 0.04, 0.17); c.rotation.set(1, 0.2, 0.4);
+  if (N.snowy) { const cap = mk(SPH(0.12, 12, 8), M(0xffffff, 0.5), r, -0.01, 0.17, 0); cap.scale.set(1.2, 0.35, 1.1); }
+}
 function createBlock(p) {
-  const T = THEMES[theme], g = new THREE.Group(); g.position.copy(W(p)); root.add(g);
-  mk(RB(0.86, 0.4, 0.86, 0.16), M(T.block, 0.6), g, 0, 0.2, 0);
-  mk(RB(0.66, 0.03, 0.66, 0.12), M(T.blockTop, 0.6), g, 0, 0.405, 0, false);
+  const N = NATURE[theme] || NATURE.city, g = new THREE.Group(); g.position.copy(W(p)); root.add(g);
+  mk(RB(0.86, 0.1, 0.86, 0.1), M(N.side, 0.8), g, 0, 0.05, 0);                 // soil
+  mk(RB(0.8, 0.04, 0.8, 0.1), M(N.ground, 0.8), g, 0, 0.1, 0, false);          // grass / sand / snow top
+  const v = ((p[0] * 7 + p[1] * 13) % 3 + 3) % 3, flip = (p[0] + p[1]) % 2 ? 1 : -1;
+  if (v === 0) natureTree(g, N, 0, 0, 1);
+  else if (v === 1) natureRocks(g, N, 0, 0, 1.15);
+  else { natureTree(g, N, -0.13 * flip, -0.1, 0.82); natureRocks(g, N, 0.2 * flip, 0.2, 0.7); }
+  if (N.flower) for (let k = 0; k < 3; k++) {                                   // tiny flowers on the ground
+    const fx = ((p[0] * 31 + p[1] * 17 + k * 23) % 11) / 11 - 0.5, fz = ((p[0] * 19 + p[1] * 29 + k * 13) % 11) / 11 - 0.5;
+    mk(SPH(0.03, 8, 6), M(N.flower[k % N.flower.length], 0.5, false, false), g, fx * 0.62, 0.135, fz * 0.62, false);
+  }
   blockVis.push(g);
 }
 
@@ -817,7 +1114,7 @@ function badgeTex(text, bg, fg = '#fff') {
   x.fillStyle = 'rgba(0,0,0,.15)'; x.beginPath(); x.arc(64, 70, 54, 0, 7); x.fill();
   x.fillStyle = '#fff'; x.beginPath(); x.arc(64, 64, 56, 0, 7); x.fill();
   x.fillStyle = bg; x.beginPath(); x.arc(64, 64, 46, 0, 7); x.fill();
-  x.fillStyle = fg; x.font = `700 ${text.length > 2 ? 44 : 62}px Fredoka, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillStyle = fg; x.font = `700 ${text.length > 3 ? 44 : text.length > 2 ? 54 : 64}px Fredoka, sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle';
   x.fillText(text, 64, 68);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
 }
@@ -979,7 +1276,7 @@ function busModel(colorName, cap) {
       pp.visible = false; body.add(pp); slots.push(pp);
     }
   }
-  const badge = makeBadge(`0/${cap * perUnit()}`, '#ffffff', hex(colorName)); badge.position.set(0, 1.08, 0); badge.scale.set(0.42, 0.42, 1); g.add(badge);
+  const badge = makeBadge(`0/${cap * perUnit()}`, '#ffffff', hex(colorName)); badge.position.set(0, 1.2, 0); badge.scale.set(0.66, 0.66, 1); g.add(badge);
   g.userData = { body, wheels, slots, per, squash: 0, badge, heading: 0, lean: 0, pitch: 0, shake: 0, hop: 0 };
   const bs = cap <= 1 ? 0.56 : cap === 2 ? 0.64 : 0.68;
   g.userData.baseScale = bs; g.scale.setScalar(bs);
@@ -1100,7 +1397,7 @@ function roadMat(kind, color) {
   m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -2;
   m.userData.shared = true; roadMats[k] = m; return m;
 }
-let tipMarks = [];
+let tipMarks = [], flowDots = [];
 // lift function for a route: raises the road where it passes over a bridge (straight along z through a cross cell)
 function bridgeLift(route) {
   const overs = [];
@@ -1115,7 +1412,7 @@ function bridgeLift(route) {
 }
 function rebuildRoutes() {
   routeObjs.forEach(o => { root.remove(o); disposeObj(o); }); routeObjs = [];
-  tipMarks = [];
+  tipMarks = []; flowDots = [];
   if (hint && mode === 'draw') {
     const b = L.buses[sel];
     const gl = bridgeLift(b.solution);
@@ -1136,7 +1433,17 @@ function rebuildRoutes() {
       const tip = new THREE.Mesh(RING(0.18, 0.27), new THREE.MeshBasicMaterial({ color: col, transparent: true, depthWrite: false }));
       const e = pl.pts.at(-1), le = lift ? lift(e) : 0;
       tip.position.set(e.x, 0.05 + le, e.z); root.add(tip); routeObjs.push(tip); tipMarks.push(tip);
-      const dot = mk(SPH(0.12, 16, 10), M(col, 0.3), root, e.x, 0.08 + le, e.z); dot.userData.baseY = 0.09 + le; routeObjs.push(dot); tipMarks.push(dot);
+      const a = r.length >= 2 ? r[r.length - 2] : r[0], b = r.length >= 2 ? r.at(-1) : L.buses[i].solution[1];
+      const dot = mk(CYL(0.16, 0.16, 0.05, 3), M(col, 0.3), root, e.x, 0.08 + le, e.z);
+      dot.rotation.y = Math.atan2(b[0] - a[0], b[1] - a[1]);
+      dot.userData.baseY = 0.09 + le; routeObjs.push(dot); tipMarks.push(dot);
+    } else {
+      const fl = new THREE.Mesh(SPH(0.09), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+      const halo = new THREE.Mesh(RING(0.12, 0.2), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.75, depthWrite: false }));
+      const s0 = sampleAt(pl, 0);
+      fl.add(halo); fl.position.set(s0.x, 0.12 + (lift ? lift(s0) : 0), s0.z); fl.visible = mode === 'draw';
+      fl.userData = { flow: true, pl, lift, len: pl.length, i };
+      root.add(fl); routeObjs.push(fl); flowDots.push(fl);
     }
   });
 }
@@ -1148,12 +1455,18 @@ function simRoute(q, bus, route, tk) {
   let cargo = 0, del = 0; const events = new Map(), drops = new Set(), cap = capOf(q, bus);
   route.forEach((p, idx) => {
     let drop = 0, pick = 0;
-    if (cargo > 0) { const s = q.stations.findIndex((st, k) => near(st, p) && stationOK(q, k, bus)); if (s >= 0) { drop = cargo; del += cargo; cargo = 0; drops.add(s); } }
-    q.pickups.forEach((pk, j) => {
-      if (pk.color !== bus.color || !near(pk.at, p) || cargo >= cap) return;
-      const n = Math.min(pk.count - tk[j], cap - cargo);
-      if (n > 0) { cargo += n; tk[j] += n; pick += n; }
-    });
+    const s = q.stations.findIndex((st, k) => near(st, p) && stationOK(q, k, bus));
+    // Rule P5 (2026-11-10): at one cell repeat "drop all -> pick up" until nothing changes,
+    // so a bus beside both a flag and a station drops what it just picked up.
+    for (let changed = true; changed;) {
+      changed = false;
+      if (cargo > 0 && s >= 0) { drop += cargo; del += cargo; cargo = 0; drops.add(s); changed = true; }
+      q.pickups.forEach((pk, j) => {
+        if (pk.color !== bus.color || !near(pk.at, p) || cargo >= cap) return;
+        const n = Math.min(pk.count - tk[j], cap - cargo);
+        if (n > 0) { cargo += n; tk[j] += n; pick += n; changed = true; }
+      });
+    }
     if (drop || pick) events.set(idx, { drop, pick });
   });
   return { events, cargo, del, drops };
@@ -1182,6 +1495,11 @@ function verify(q) {
       } else if (n > 1) return false;
     }
   }
+  for (const g of q.gates) {
+    const on = c => q.buses.some(b => eq(b.start, c) || eq(b.end, c)) || isCross(q, c) || pairOf(q, c) || q.blocks.some(x => eq(x, c)) || q.stations.some(x => eq(x, c)) || q.pickups.some(x => eq(x.at, c));
+    if (on(g.at) || on(g.button) || eq(g.at, g.button)) return false;
+  }
+  if (q.gates.length) { const pos = gateReach(q, q.buses.map(b => b.solution)); if (q.buses.some((b, i) => pos[i] < b.solution.length - 1)) return false; }
   const tk = q.pickups.map(() => 0);
   const res = q.buses.map(b => simRoute(q, b, b.solution, tk));
   return res.every(r => r.cargo === 0) && q.pickups.every((p, j) => tk[j] === p.count);
@@ -1191,8 +1509,14 @@ function verify(q) {
 function updatePreview() {
   const tk = L.pickups.map(() => 0); const drops = new Set();
   paths.forEach((r, i) => { const s = simRoute(L, L.buses[i], r, tk); s.drops.forEach(d => drops.add(d)); });
-  pickVis.forEach((v, j) => v.reserved = tk[j]);
+  pickVis.forEach((v, j) => {
+    if (mode === 'draw' && v.reserved === 0 && tk[j] > 0 && T - (v.happyT ?? -9) >= 0.8) {
+      v.happyT = T; bubble(v.g.position.clone().setY(0.95), '😍'); SFX.happy();
+    }
+    v.reserved = tk[j];
+  });
   stationVis.forEach((v, j) => v.willDrop = drops.has(j));
+  L.gates.forEach((g, k) => { const on = paths.some(r => r.some(c => eq(c, g.button))); if (gateVis[k]) gateVis[k].willOpen = on; if (buttonVis[k]) buttonVis[k].covered = on; });
 }
 
 /* =========================================================
@@ -1266,7 +1590,7 @@ function handleCell(c) {
   if (jumpLock) { if (eq(c, tip) || near(c, tip)) jumpLock = false; else return; }
   if (eq(c, tip)) return;
   const k = r.findIndex(q => eq(q, c));
-  if (k >= 0) { r.length = k + 1; SFX.step(r.length); onPathsChanged(); return; }
+  if (k >= 0) { r.length = k + 1; SFX.back(r.length); onPathsChanged(); return; }
   if (routeDone(sel)) return;
   if (near(c, tip)) { tryExtend(c); return; }
   let guard = 24;
@@ -1302,6 +1626,7 @@ function startRun() {
   clearTimeout(autoT); autoT = null;
   mode = 'run'; drawing = false; hint = false; demoQ = null; speed = 1;
   taken = L.pickups.map(() => 0); delivered = 0; shown = 0; shownPeople = 0;
+  gateOpen = L.gates.map(() => false); deadT = 0;
   rebuildRoutes();
   const tk = L.pickups.map(() => 0);
   runners = L.buses.map((b, i) => {
@@ -1312,6 +1637,7 @@ function startRun() {
   busVis.forEach(b => { b.userData.slots.forEach(s => s.visible = false); setCargo(b, 0); });
   ambient.filter(a => a.type === 'pad').forEach(a => a.obj.visible = false);
   SFX.go(); toast('Xuất phát! Chạm ⏩ để tăng tốc', '');
+  runners.forEach(r => horn(capOf(L, r.b), r.pause - 0.15));
   refreshUI();
   runners.forEach(r => arrive(r));
 }
@@ -1319,6 +1645,7 @@ function slotWorld(bus, k) { bus.updateMatrixWorld(true); return bus.userData.sl
 
 function arrive(r) {
   const p = r.route[r.at], bus = busVis[r.i];
+  pressButtons(p);
   let t = 0;
   if (r.cargo > 0) {
     const s = L.stations.findIndex((st, k) => near(st, p) && stationOK(L, k, r.b));
@@ -1333,6 +1660,10 @@ function arrive(r) {
     r.cargo += n; taken[j] += n; setCargo(bus, r.cargo);
   });
   if (t > 0) r.pause = Math.max(r.pause, t + 0.12);
+  // Rule P5: still carrying people beside a station that takes them -> after the boarding
+  // animation finishes, run another drop/pick round on this same cell (see updateRunners).
+  r.again = r.cargo > 0 && L.stations.some((st, k) => near(st, p) && stationOK(L, k, r.b));
+  if (r.again) return;
   if (r.at >= r.route.length - 1) r.state = r.cargo > 0 ? 'stuck' : 'exit';
   else if (r.state === 'drive' && isJump(r.route, r.at)) { r.state = 'tp'; r.tp = 0; r.tpMid = false; }
 }
@@ -1349,12 +1680,15 @@ function pickAnim(bus, pv, fromCargo, n, delay) {
       const slot = bus.userData.slots[slotUnit * per + idx];
       root.attach(pp);
       const to = slot ? slotWorld(bus, slotUnit * per + idx) : bus.position.clone().setY(0.5);
-      jump(pp, to, 0.42, delay + k * 0.07, 0.75, () => SFX.hop(), () => {
+      const note = fromCargo * per + k;
+      jump(pp, to, 0.42, delay + k * 0.07, 0.75, () => SFX.hop(note), () => {
+        pp.rotation.x = 0;
         root.remove(pp); disposeObj(pp);
         if (slot) { slot.visible = true; slot.userData.pop = 1; }
         bus.userData.squash = 1;
         floatLabel(to.clone().setY(1.2).add(new THREE.Vector3((Math.random() - 0.5) * 0.24, 0, (Math.random() - 0.5) * 0.24)), '+1', hex(L.buses[busVis.indexOf(bus)].color));
       });
+      if (Math.random() < 0.3) jumpers[jumpers.length - 1].flip = true;
       k++;
     });
   }
@@ -1373,7 +1707,7 @@ function dropAnim(bus, st, n, color) {
     const to = new THREE.Vector3(center.x + Math.cos(a) * rr, 0.11, center.z + Math.sin(a) * rr + 0.05);
     const unitEnd = idx % per === per - 1;
     jump(pp, to, 0.4, idx * 0.06, 0.6, idx === 0 ? () => SFX.drop() : null, () => {
-      if (idx === 0) st.open = Math.max(st.open, 0.6);
+      if (idx === 0) { st.open = Math.max(st.open, 0.6); bubble(center.clone().setY(1.15), '❤️'); }
       cheer.push({ obj: pp, life: 0.9 + Math.random() * 0.3, t: 0 });
       shownPeople++; bump('cnt'); refreshUI();
       floatLabel(to.clone().setY(1.0).add(new THREE.Vector3((Math.random() - 0.5) * 0.24, 0, (Math.random() - 0.5) * 0.24)), '+1', '#2fcf55');
@@ -1419,6 +1753,31 @@ function floatLabel(pos, text, color) {
   s.scale.set(0.8, 0.4, 1); s.position.copy(pos); s.renderOrder = 30; root.add(s);
   fx.push({ kind: 'label', obj: s, life: 1, max: 1 });
 }
+const bubbleCache = new Map();
+function bubbleTex(ch) {
+  let t = bubbleCache.get(ch); if (t) return t;
+  const c = document.createElement('canvas'); c.width = c.height = 128;
+  const x = c.getContext('2d');
+  x.beginPath();
+  x.moveTo(38, 12); x.lineTo(90, 12); x.quadraticCurveTo(114, 12, 114, 36);
+  x.lineTo(114, 70); x.quadraticCurveTo(114, 94, 90, 94);
+  x.lineTo(76, 94); x.lineTo(64, 114); x.lineTo(52, 94);
+  x.lineTo(38, 94); x.quadraticCurveTo(14, 94, 14, 70);
+  x.lineTo(14, 36); x.quadraticCurveTo(14, 12, 38, 12);
+  x.closePath();
+  x.fillStyle = '#fff'; x.fill();
+  x.lineWidth = 6; x.strokeStyle = '#12306b'; x.lineJoin = 'round'; x.stroke();
+  x.font = '72px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
+  x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillText(ch, 64, 56);
+  t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.userData.shared = true;
+  bubbleCache.set(ch, t); return t;
+}
+function bubble(pos, ch, life = 1.1) {
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: bubbleTex(ch), transparent: true, depthTest: false, depthWrite: false }));
+  s.scale.setScalar(0.001); s.position.copy(pos); s.renderOrder = 30; root.add(s);
+  fx.push({ kind: 'bubble', obj: s, life, max: life });
+}
 function flyCoin(world) {
   const fr = $('frame'), p = toScreen(world), c = document.createElement('div');
   c.className = 'flycoin'; c.style.left = p.x + 'px'; c.style.top = p.y + 'px'; fr.appendChild(c);
@@ -1454,9 +1813,11 @@ function complete() {
     const stars = 3;
     coins += 30; store.set('bl_coins', coins);
     SFX.win(); confettiDom(); buzz([20, 60, 20]);
+    stationVis.forEach((st, k) => later(() => bubble(st.g.position.clone().setY(1.15), '🥳'), 120 * k));
     later(() => showModal(true, stars), 700);
   } else {
-    pickVis.forEach(v => { if (v.remain > 0) { v.shake = 1.5; floatLabel(v.g.position.clone().setY(1.1), '!', '#ff3b3b'); } });
+    pickVis.forEach(v => { if (v.remain > 0) { v.shake = 1.5; floatLabel(v.g.position.clone().setY(1.1), '!', '#ff3b3b'); bubble(v.g.position.clone().setY(0.95), '😢'); } });
+    runners.forEach(r => { if (r.failed) bubble(busVis[r.i].position.clone().setY(1.25), '😵'); });
     SFX.lose(); buzz(80);
     later(() => showModal(false, 0), 1100);
   }
@@ -1470,9 +1831,10 @@ function showModal(won, stars) {
   $('mBig').style.display = 'block'; $('mBig').textContent = won ? '🎉' : '🚧';
   
   
-  const stuck = runners.filter(r => r.failed).length;
+  const stuck = runners.filter(r => r.failed).length, gateStuck = runners.some(r => r.gateStuck);
   $('mText').textContent = won
     ? `Đã chở đủ ${total * perUnit()} khách về trạm! +30 xu`
+    : gateStuck ? 'Xe bị kẹt trước cổng đóng! Cho một xe chạy qua nút 🔘 cùng màu trước để mở cổng.'
     : stuck ? 'Còn khách ngồi trên xe! Nhớ ghé trạm trắng trước khi về cổng nhé.'
             : `Mới đón ${taken.reduce((a, b) => a + b, 0) * perUnit()}/${total * perUnit()} khách. Hãy cho xe đi ngang cạnh cờ còn khách!`;
   $('mNext').style.display = won ? 'block' : 'none';
@@ -1481,6 +1843,20 @@ function showModal(won, stars) {
 /* =========================================================
    SHELL: home / shop
    ========================================================= */
+let transitioning = false;
+function transitionTo(fn) {
+  if (transitioning) { fn(); return; }
+  transitioning = true;
+  const wipe = $('wipe');
+  wipe.className = 'in'; SFX.whoosh();
+  setTimeout(() => {
+    try { fn(); }
+    finally {
+      wipe.className = 'out';
+      setTimeout(() => { wipe.className = ''; transitioning = false; }, 340);
+    }
+  }, 330);
+}
 function goHome() {
   clearTimeout(autoT); autoT = null;
   if (mode !== 'draw' || demoQ) reset(lvl);
@@ -1510,7 +1886,8 @@ const MECHS = [
   { key: 'cap', icon: '🚌', name: 'Xe khác sức chứa', has: q => new Set(q.buses.map(b => capOf(q, b))).size > 1 },
   { key: 'col', icon: '🚩', name: 'Trạm màu', has: q => q.stationColors.some(Boolean) },
   { key: 'tun', icon: '🌉', name: 'Cầu vượt', has: q => q.cross.length > 0 },
-  { key: 'tp', icon: '🌀', name: 'Dịch chuyển', has: q => q.tp.length > 0 }
+  { key: 'tp', icon: '🌀', name: 'Dịch chuyển', has: q => q.tp.length > 0 },
+  { key: 'gate', icon: '🔘', name: 'Nút bấm – cổng', has: q => q.gates.length > 0 }
 ];
 function openLevels() {
   const firstSeen = {};
@@ -1522,7 +1899,7 @@ function openLevels() {
     const tip = ms.map(m => m.name).join(', ') || 'Cơ bản';
     return `<button class="${cls}" style="--i:${i}" data-l="${i}" title="${tip}">${i + 1}<small>${ms.map(m => m.icon).join('')}</small>${intro ? '<span class="new">MỚI</span>' : ''}</button>`;
   }).join('');
-  $('lgrid').querySelectorAll('button').forEach(b => b.onclick = () => { audio(); $('lsel').classList.add('hidden'); $('home').classList.add('hidden'); $('frame').classList.remove('at-home'); reset(+b.dataset.l); });
+  $('lgrid').querySelectorAll('button').forEach(b => b.onclick = () => { audio(); transitionTo(() => { $('lsel').classList.add('hidden'); $('home').classList.add('hidden'); $('frame').classList.remove('at-home'); reset(+b.dataset.l); }); });
   $('lsel').classList.remove('hidden');
   const cur = $('lgrid').querySelector('.cur'); if (cur) cur.scrollIntoView({ block: 'center' });
 }
@@ -1580,18 +1957,19 @@ function bindEvents() {
   $('homeGear').onclick = () => { audio(); $('settings').classList.remove('hidden'); };
   $('setClose').onclick = () => $('settings').classList.add('hidden');
   $('swSound').onclick = () => { audio(); muted = !muted; store.set('bl_mute', muted); refreshUI(); SFX.step(4); };
+  $('swMusic').onclick = () => { musicOn = !musicOn; store.set('bl_music', musicOn); audio(); refreshUI(); };
   $('swVib').onclick = () => { vibOn = !vibOn; store.set('bl_vib', vibOn); buzz(30); refreshUI(); };
-  $('setHome').onclick = () => { $('settings').classList.add('hidden'); goHome(); };
+  $('setHome').onclick = () => transitionTo(() => { $('settings').classList.add('hidden'); goHome(); });
   $('setReset').onclick = () => { coins = 120; store.set('bl_coins', coins); $('settings').classList.add('hidden'); reset(0); goHome(); toast('Đã xoá tiến độ', 'good'); };
-  $('homeBtn').onclick = () => { audio(); goHome(); };
-  $('homePlay').onclick = () => { audio(); SFX.go(); $('home').classList.add('hidden'); $('frame').classList.remove('at-home'); reset(lvl); };
+  $('homeBtn').onclick = () => { audio(); transitionTo(goHome); };
+  $('homePlay').onclick = () => { audio(); transitionTo(() => { SFX.go(); $('home').classList.add('hidden'); $('frame').classList.remove('at-home'); reset(lvl); }); };
   $('navLevels').onclick = () => { audio(); openLevels(); };
   $('navShop').onclick = () => { audio(); openShop(); };
   $('shopClose').onclick = () => $('shop').classList.add('hidden');
   $('mHome').onclick = () => { audio(); $('modal').classList.add('hidden'); goHome(); };
   $('undo').onclick = () => {
     audio(); if (mode !== 'draw') return;
-    const r = paths[sel]; if (r.length > 1) { r.pop(); SFX.step(r.length); onPathsChanged(); }
+    const r = paths[sel]; if (r.length > 1) { r.pop(); SFX.back(r.length); onPathsChanged(); }
   };
   $('hint').onclick = () => { audio(); if (mode !== 'draw') return; hint = !hint; if (hint) hintUsed = true; onPathsChanged(); };
   $('demo').onclick = () => {
@@ -1605,7 +1983,7 @@ function bindEvents() {
     if (!allDone()) { const i = paths.findIndex((_, j) => !routeDone(j)); sel = i; busVis[i].userData.hop = 1; toast(`Xe ${L.buses[i].id} chưa tới cổng đích 🚩`, 'bad'); SFX.bad(); return; }
     startRun();
   };
-  $('mNext').onclick = () => { audio(); reset(lvl + 1); };
+  $('mNext').onclick = () => { audio(); transitionTo(() => reset(lvl + 1)); };
   $('mRetry').onclick = () => { audio(); reset(lvl); };
   window.addEventListener('keydown', e => { if (e.key === 'ArrowRight') reset(lvl + 1); if (e.key === 'ArrowLeft') reset(lvl - 1); });
 }
@@ -1672,6 +2050,7 @@ function updateRunners(dt) {
     if (r.state === 'done') continue;
     if (r.state === 'tp') { teleportStep(r, bus, u, dt); continue; }
     if (r.pause > 0) { r.pause -= dt; r.v = 0; settle(u, dt); continue; }
+    if (r.again) { r.again = false; arrive(r); continue; }   // P5: next drop/pick round on the same cell
     if (r.state === 'stuck') {
       r.state = 'done'; r.failed = true; u.shake = 1;
       floatLabel(bus.position.clone().setY(1.4), '!', '#ff3b3b'); continue;
@@ -1686,8 +2065,17 @@ function updateRunners(dt) {
       if (e >= 1) { r.state = 'done'; bus.visible = false; exitVis[r.i].bounce = 1; sparkle(W(r.b.end), COLORS[r.b.color], 16); SFX.exit(); }
       continue;
     }
+    // closed gate on the next cell: stop here, honk now and then, wait for a button press
+    const gk = gateAt(L, r.route[r.at + 1]);
+    if (gk >= 0 && !gateOpen[gk]) {
+      r.v = 0; settle(u, dt); r.waitGate = gk; r.honkT = (r.honkT === undefined ? 0.5 : r.honkT) - dt;
+      if (r.honkT <= 0) { r.honkT = 2.2; horn(capOf(L, r.b), 0, true); u.squash = 1; gateVis[gk].shake = 0.5; }
+      continue;
+    }
+    r.waitGate = -1; r.honkT = 0.5;
     const target = r.pl.anchors[r.at + 1];
-    const stopNext = r.ev.has(r.at + 1) || isJump(r.route, r.at + 1) || r.at + 1 === r.route.length - 1;
+    const g2 = r.at + 2 < r.route.length ? gateAt(L, r.route[r.at + 2]) : -1;
+    const stopNext = r.ev.has(r.at + 1) || isJump(r.route, r.at + 1) || r.at + 1 === r.route.length - 1 || (g2 >= 0 && !gateOpen[g2]);
     // target speed: slow a little into tight corners, brake smoothly before stops
     const hNow = headingAt(r.pl, r.dist), hAhead = headingAt(r.pl, Math.min(pieceRange(r.pl, r.dist)[1], r.dist + 0.45));
     const turn = hNow === null || hAhead === null ? 0 : Math.abs(angDiff(hAhead, hNow));
@@ -1717,6 +2105,12 @@ function updateRunners(dt) {
     if (r.puff <= 0 && r.v > 0.6 && bus.position.y > -0.05) { r.puff = 0.14; bus.updateMatrixWorld(); puff(new THREE.Vector3(-0.26, 0.2, 0.72).applyMatrix4(bus.matrixWorld)); }
     if (r.dist >= target - 1e-5) { r.at++; arrive(r); }
   }
+  // deadlock: every bus still on the road waits at a closed gate -> nobody can ever press a button
+  const waiting = runners.filter(r => r.state !== 'done');
+  if (waiting.length && waiting.every(r => r.waitGate >= 0 && !gateOpen[r.waitGate]) && jumpers.length === 0) {
+    deadT += dt;
+    if (deadT > 1.6) waiting.forEach(r => { r.state = 'stuck'; r.gateStuck = true; r.waitGate = -1; });
+  } else deadT = 0;
   if (!endT && runners.length && runners.every(r => r.state === 'done') && jumpers.length === 0 && cheer.length === 0) {
     endT = setTimeout(() => { endT = null; complete(); }, 300);
   }
@@ -1757,6 +2151,11 @@ function tick() {
 }
 function update(dt) {
   T += dt;
+  if (root.userData.intro > 0) {
+    const k = root.userData.intro = Math.max(0, root.userData.intro - dt / 0.45);
+    root.position.y = 0.8 * k * k;
+    root.scale.setScalar(k ? 1 + 0.14 * (1.70158 * k * k - 2.70158 * k * k * k) : 1);
+  }
   flushPaths();
   const sdt = mode === 'run' ? dt * speed : dt;
   if (demoQ) stepDemo(dt);
@@ -1771,22 +2170,48 @@ function update(dt) {
   }
   // ambient props
   for (const a of ambient) {
-    if (a.type === 'spin') a.obj.rotation.z -= dt * 1.4;
+    if (a.type === 'snow') {
+      a.obj.position.y -= dt * a.speed;
+      if (a.obj.position.y < 0.12) {
+        a.obj.position.y = 2.8;
+        const bound = L.size / 2 - 0.24;
+        a.x = (Math.random() * 2 - 1) * bound; a.z = (Math.random() * 2 - 1) * bound;
+      }
+      a.obj.position.x = a.x + Math.sin(T * 0.6 + a.phase) * 0.12;
+      a.obj.position.z = a.z + Math.cos(T * 0.5 + a.phase) * 0.08;
+    } else if (a.type === 'firefly') {
+      a.obj.position.x = a.x + Math.sin(T * a.speed + a.phase) * 0.18;
+      a.obj.position.z = a.z + Math.cos(T * a.speed * 0.8 + a.phase) * 0.18;
+      a.obj.position.y = a.y + Math.sin(T * 1.1 + a.phase) * 0.12;
+      a.obj.material.opacity = 0.35 + 0.6 * (0.5 + 0.5 * Math.sin(T * 2.4 + a.phase));
+    } else if (a.type === 'spin') a.obj.rotation.z -= dt * 1.4;
     else if (a.type === 'spinY') a.obj.rotation.y -= dt * 3;
     else if (a.type === 'sway') a.obj.rotation.z = Math.sin(T * 1.3 + a.obj.userData.sway) * 0.03;
     else if (a.type === 'pad') { const on = mode === 'draw' && a.i === sel; a.obj.material.opacity = on ? 0.55 + 0.35 * Math.sin(T * 6) : 0.3; a.obj.scale.setScalar(on ? 1 + 0.08 * Math.sin(T * 6) : 1); }
   }
   // crowds
   for (const v of pickVis) {
-    const excited = mode === 'draw' && v.reserved > 0;
+    const idx = mode === 'run' && v.remain > 0 ? L.buses.findIndex(b => b.color === v.color) : -1;
+    const excited = (mode === 'draw' && v.reserved > 0) || (idx >= 0 && busVis[idx].position.distanceTo(v.g.position) < 1.7);
     let n = 0;
     for (let u = 0; u < v.remain; u++) for (const pp of v.units[u]) {
-      const ph = pp.userData.phase; n++;
+      const d = pp.userData, ph = d.phase; n++;
       const amp = excited ? 0.09 : 0.025, sp = excited ? 9 : 4;
-      pp.position.y = 0.11 + Math.abs(Math.sin(T * sp + ph)) * amp;
+      let y = 0.11 + Math.abs(Math.sin(T * sp + ph)) * amp, ry = Math.sin(T * 0.8 + ph) * 0.5, sy = 1, sxz = 1;
       pose(pp, excited ? 'wave' : 'idle', T * (excited ? 9 : 3) + ph);
-      if (Math.sin(T * 0.7 + ph * 3) > 0.985) pp.position.y += 0.06;
-      pp.rotation.y = Math.sin(T * 0.8 + ph) * 0.5;
+      // every person picks a little action now and then: hop, spin, wave, stretch, look around
+      if (d.next === undefined) d.next = T + 0.3 + Math.random() * 4;
+      if (!d.act && T > d.next) { d.act = CROWD_ACTS[(Math.random() * CROWD_ACTS.length) | 0]; d.t0 = T; }
+      if (d.act) {
+        const k = (T - d.t0) / CROWD_DUR[d.act], b = Math.sin(Math.min(1, k) * Math.PI);
+        if (k >= 1) { d.act = null; d.next = T + (excited ? 0.3 + Math.random() * 1.2 : 1.2 + Math.random() * 4); }
+        else if (d.act === 'hop') { y += b * 0.2; pose(pp, 'cheer', T * 14 + ph); const q = k < 0.15 || k > 0.85 ? 0.18 : -0.1; sy = 1 - q * (1 - b); sxz = 1 + q * 0.5 * (1 - b); }
+        else if (d.act === 'spin') { y += b * 0.15; ry += k * Math.PI * 2; }
+        else if (d.act === 'wave') pose(pp, 'wave', T * 11 + ph);
+        else if (d.act === 'stretch') { sy = 1 + b * 0.25; sxz = 1 - b * 0.1; d.armL.rotation.set(0, 0, -0.25 - b * 2.2); d.armR.rotation.set(0, 0, 0.25 + b * 2.2); }
+        else if (d.act === 'look') ry += Math.sin(k * Math.PI * 2) * 1.3;
+      }
+      pp.position.y = y; pp.rotation.y = ry; pp.scale.set(d.s * sxz, d.s * sy, d.s * sxz);
     }
     v.glow.material.opacity = excited ? 0.5 + 0.3 * Math.sin(T * 6) : 0;
     v.glow.material.color.setHex(excited ? COLORS[v.color] : 0xffffff);
@@ -1824,14 +2249,26 @@ function update(dt) {
     for (const s of u.slots) {
       if (!s.visible) continue;
       if (s.userData.pop > 0) { s.userData.pop = Math.max(0, s.userData.pop - dt * 4); const k = 1 + Math.sin(s.userData.pop * Math.PI) * 0.5; s.scale.setScalar(0.82 * k); }
-      s.position.y = s.userData.baseY + Math.abs(Math.sin(T * 6 + s.userData.phase)) * 0.02;
+      const rv = mode === 'run' && runners[i] ? runners[i].v : 0, ph = s.userData.phase;
+      s.position.y = s.userData.baseY + Math.abs(Math.sin(T * (6 + rv * 3) + ph)) * (0.02 + rv * 0.012);
+      s.rotation.z = -u.lean * 1.6;                                    // riders sway the other way in turns
+      pose(s, 'sit', 0);
+      if (Math.sin(T * 0.9 + ph * 2.3) > 0.6 || (rv > 1.5 && Math.sin(T * 1.7 + ph) > 0.2)) s.userData.armR.rotation.set(0, 0, 2.3 + Math.sin(T * 10 + ph) * 0.5);
     }
   });
-  // tip markers pulse
+  // tip markers pulse + completed route flow lights
   tipMarks.forEach((m, k) => { if (m.geometry.type === 'RingGeometry') m.scale.setScalar(1 + 0.25 * Math.sin(T * 8)); else m.position.y = (m.userData.baseY || 0.09) + Math.abs(Math.sin(T * 6)) * 0.06; });
+  for (const f of flowDots) {
+    if (mode !== 'draw') { f.visible = false; continue; }
+    const { pl, lift, len, i } = f.userData, d = (T * 2.4 + i * 0.7) % (len + 0.6);
+    if (d > len) { f.visible = false; continue; }
+    const p = sampleAt(pl, d);
+    f.visible = true; f.position.set(p.x, 0.12 + (lift ? lift(p) : 0), p.z);
+  }
   chevronTex.offset.x -= dt * (mode === 'run' ? 2.2 : 1.1);
 
   if (mode === 'run') updateRunners(sdt);
+  updateGates(mode === 'run' ? sdt : dt);
 
   // jumpers
   jumpers = jumpers.filter(j => {
@@ -1845,6 +2282,7 @@ function update(dt) {
     const st = 1 + Math.sin(j.t * Math.PI) * 0.25;
     j.obj.scale.set(j.s / Math.sqrt(st), j.s * st, j.s / Math.sqrt(st));
     pose(j.obj, 'run', j.t * 22);
+    if (j.flip) j.obj.rotation.x = -easeInOut(j.t) * Math.PI * 2;
     if (j.t >= 1) { j.obj.scale.setScalar(j.s); j.onLand && j.onLand(); return false; }
     return true;
   });
@@ -1865,6 +2303,13 @@ function update(dt) {
     else if (e.kind === 'puff') { e.obj.position.y += dt * 0.5; e.obj.scale.setScalar(1 + (1 - k) * 2); e.obj.material.opacity = k * 0.8; }
     else if (e.kind === 'flash') e.obj.material.opacity = k * 0.7;
     else if (e.kind === 'label') { e.obj.position.y += dt * 0.7; e.obj.material.opacity = Math.min(1, k * 2); const s = 0.8 * (1 + Math.max(0, (k - 0.8)) * 2); e.obj.scale.set(s, s / 2, 1); }
+    else if (e.kind === 'bubble') {
+      const age = e.max - e.life, u = clamp(age / 0.15, 0, 1), p = u - 1;
+      const sc = age < 0.15 ? 0.42 * (1 + 2.7 * p * p * p + 1.7 * p * p) : 0.42;
+      e.obj.scale.setScalar(Math.max(0.001, sc));
+      e.obj.position.y += dt * 0.28;
+      e.obj.material.opacity = Math.min(1, Math.max(0, e.life / 0.3));
+    }
     if (e.life <= 0) { root.remove(e.obj); disposeObj(e.obj); return false; }
     return true;
   });
@@ -1873,6 +2318,8 @@ function update(dt) {
 }
 
 /* tutorial hand: shows the gesture when the player is idle */
+const CROWD_ACTS = ['hop', 'spin', 'wave', 'stretch', 'look', 'hop'];
+const CROWD_DUR = { hop: 0.45, spin: 0.6, wave: 1.2, stretch: 0.6, look: 1.4 };
 function updateHand(dt) {
   const h = $('hand');
   const empty = paths.every(r => r.length === 1);
@@ -1908,6 +2355,7 @@ window.__bus3dTest = {
   }),
   snap: () => { effect.render(scene, camera); return $('scene').toDataURL('image/jpeg', 0.7); },
   step: (sec = 1) => { for (let t = 0; t < sec; t += 1 / 30) update(1 / 30); effect.render(scene, camera); return mode; },
+  runPaths: ps => { paths = ps.map(r => r.map(p => p.slice())); onPathsChanged(); startRun(); },
   solveNow: () => { paths = L.buses.map(b => b.solution.map(p => p.slice())); onPathsChanged(); startRun(); }
 };
 
