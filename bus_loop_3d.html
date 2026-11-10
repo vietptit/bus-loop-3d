@@ -418,7 +418,7 @@ const hex = c => '#' + COLORS[c].toString(16).padStart(6, '0');
 const THEMES = {
   city: {
     sky: ['#8fd8ff', '#c4ecff', '#eaf8ff'],
-    tileA: 0x8fd468, tileB: 0x86cc60, lawn: true, grass: 0x6cb84c, grassTop: 0x7cc457, cliff: [0xc98f5a, 0xb07a4a, 0x93633b],
+    tileA: 0xfff0dc, tileB: 0xf7dfc0, grass: 0xe0a98a, grassTop: 0xfff3e2, cliff: [0xd9a27f, 0xc48c6a, 0xab7656],
     hemiSky: 0xffffff, hemiGround: 0xdfeedd, hemiIntensity: 1.15, sunColor: 0xfff6ea, sunIntensity: 1.6, name: 'Thành phố', icon: '🏙️'
   },
   beach: {
@@ -428,7 +428,7 @@ const THEMES = {
   },
   forest: {
     sky: ['#7fdcc4', '#c3f0d6', '#f2fbe4'],
-    tileA: 0x78c45b, tileB: 0x70bc54, lawn: true, grass: 0x5aa444, grassTop: 0x68b24f, cliff: [0x9a7050, 0x835e43, 0x6c4c36],
+    tileA: 0xfff0dc, tileB: 0xf7dfc0, grass: 0xe0a98a, grassTop: 0xfff3e2, cliff: [0xd9a27f, 0xc48c6a, 0xab7656],
     hemiSky: 0xe8fff2, hemiGround: 0xcfe3bb, hemiIntensity: 1.2, sunColor: 0xfff3d6, sunIntensity: 1.55, name: 'Rừng xanh', icon: '🌲'
   },
   snow: {
@@ -983,7 +983,7 @@ function createWater(p) {
 function createBridge(br) {
   // same arched bridge as the overpass, turned to follow the river crossing
   const g = new THREE.Group(); g.position.copy(W(br.at)); g.rotation.y = br.axis === 'h' ? Math.PI / 2 : 0; root.add(g);
-  mk(archBand(0.78, -0.08, 0, 0), M(0xc9e6ff), g);
+  mk(archBand(0.7, -0.11, -0.035, 0), M(0xc9e6ff), g);   // deck sits a bit below the road ribbon so they never z-fight
   for (const sx of [-1, 1]) mk(archBand(0.08, -0.06, 0.08, sx * 0.4), M(0x2f80ed), g);
 }
 /* ---------- floating island: grass lip, layered earth cliff, hanging rocks, little floating rocks ---------- */
@@ -1075,7 +1075,7 @@ function archBand(width, lo, hi, xc) {
 }
 function createCross(p) {
   const g = new THREE.Group(); g.position.copy(W(p)); g.rotation.y = Math.PI / 2; root.add(g);   // arch runs along x
-  mk(archBand(0.78, -0.08, 0, 0), M(0xc9e6ff), g);                    // light-blue deck (road ribbon is drawn on top of it)
+  mk(archBand(0.7, -0.11, -0.035, 0), M(0xc9e6ff), g);   // deck sits a bit below the road ribbon so they never z-fight                    // light-blue deck (road ribbon is drawn on top of it)
   for (const sx of [-1, 1]) mk(archBand(0.08, -0.06, 0.08, sx * 0.4), M(0x2f80ed), g);   // chunky curved side rails
 }
 
@@ -1515,15 +1515,16 @@ function cap(p, r, y, mat) {
   m.position.set(p.x, y, p.z); m.receiveShadow = true; root.add(m); routeObjs.push(m);
 }
 const roadMats = {};
-const ROAD_COLORS = { city: [0xf7d9a8, 0xe6bd88], forest: [0xf3d39e, 0xdcb07a], beach: [0xfff6e2, 0xe7cc9c], snow: [0xf1f9fe, 0xb7d8ea], sunset: [0xffece2, 0xe0a98f] };
+const ROAD_COLORS = { city: [0xf2cf98, 0xd9a96e], forest: [0xf2cf98, 0xd9a96e], beach: [0xfff6e2, 0xe7cc9c], snow: [0xf1f9fe, 0xb7d8ea], sunset: [0xffece2, 0xe0a98f] };
 function roadMat(kind, color) {
   const k = kind + color;
   if (roadMats[k]) return roadMats[k];
   let m;
-  if (kind === 'chev') m = new THREE.MeshBasicMaterial({ color, map: chevronTex, transparent: true, opacity: 0.6, depthWrite: false });
+  if (kind === 'chev') m = new THREE.MeshBasicMaterial({ color, map: chevronTex, transparent: true, depthWrite: false });
   else if (kind === 'ghost') m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45, depthWrite: false });
   else m = new THREE.MeshStandardMaterial({ color, roughness: 0.95 });
-  m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -2;
+  const po = { edge: 1, road: 2, chev: 3, ghost: 1 }[kind] || 1;
+  m.polygonOffset = true; m.polygonOffsetFactor = -po; m.polygonOffsetUnits = -2 * po;
   m.userData.shared = true; roadMats[k] = m; return m;
 }
 let tipMarks = [], flowDots = [];
@@ -1560,14 +1561,14 @@ function rebuildRoutes() {
   paths.forEach((r, i) => {
     if (r.length < 2) return;
     const pl = polyline(r), col = COLORS[L.buses[i].color];
-    // soft dirt road in the world's road colour; only the small arrows carry the bus colour
-    const RC = ROAD_COLORS[theme] || ROAD_COLORS.city, edge = roadMat('edge', RC[1]), road = roadMat('road', RC[0]);
+    // road in the bus colour (as in the original): darker edge, pale surface, marching arrows
+    const edge = roadMat('edge', tint(col, 0.25)), road = roadMat('road', tint(col, 0.72));
     const yo = i * 0.0025, lift = bridgeLift(r);
     for (const pc of pieces(pl)) {
-      if (pc.pts.length > 1) { ribbon(pc, 0.7, 0.026 + yo, edge, 0, lift); ribbon(pc, 0.6, 0.032 + yo, road, 0, lift); ribbon(pc, 0.18, 0.038 + yo, roadMat('chev', col), 0.36, lift); }
+      if (pc.pts.length > 1) { ribbon(pc, 0.7, 0.026 + yo, edge, 0, lift); ribbon(pc, 0.6, 0.036 + yo, road, 0, lift); ribbon(pc, 0.24, 0.046 + yo, roadMat('chev', col), 0.36, lift); }
       const l0 = lift ? lift(pc.pts[0]) : 0, l1 = lift ? lift(pc.pts.at(-1)) : 0;
       cap(pc.pts[0], 0.37, 0.026 + yo + l0, edge); cap(pc.pts.at(-1), 0.37, 0.026 + yo + l1, edge);
-      cap(pc.pts[0], 0.29, 0.032 + yo + l0, road); cap(pc.pts.at(-1), 0.29, 0.032 + yo + l1, road);
+      cap(pc.pts[0], 0.29, 0.036 + yo + l0, road); cap(pc.pts.at(-1), 0.29, 0.036 + yo + l1, road);
     }
     if (!routeDone(i)) {
       const tip = new THREE.Mesh(RING(0.18, 0.27), new THREE.MeshBasicMaterial({ color: col, transparent: true, depthWrite: false }));
