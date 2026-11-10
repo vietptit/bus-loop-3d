@@ -418,27 +418,27 @@ const hex = c => '#' + COLORS[c].toString(16).padStart(6, '0');
 const THEMES = {
   city: {
     sky: ['#8fd8ff', '#c4ecff', '#eaf8ff'],
-    tileA: 0x86dc55, tileB: 0x6fcb45, lawn: true, grass: 0x5fb83c, grassTop: 0x74c94a, cliff: [0xc98f5a, 0xb07a4a, 0x93633b],
+    tileA: 0x8fd468, tileB: 0x86cc60, lawn: true, grass: 0x6cb84c, grassTop: 0x7cc457, cliff: [0xc98f5a, 0xb07a4a, 0x93633b],
     hemiSky: 0xffffff, hemiGround: 0xdfeedd, hemiIntensity: 1.15, sunColor: 0xfff6ea, sunIntensity: 1.6, name: 'Thành phố', icon: '🏙️'
   },
   beach: {
     sky: ['#6fdcff', '#b9f1f4', '#fff5d6'],
-    tileA: 0xfff6dc, tileB: 0xffeac2, grass: 0xf3d08a, grassTop: 0xffe1a3, cliff: [0xe2b57f, 0xcf9e6a, 0xb98857],
+    tileA: 0xf8e3b6, tileB: 0xf2dbaa, grass: 0xe9c88c, grassTop: 0xf0d39b, cliff: [0xe2b57f, 0xcf9e6a, 0xb98857],
     hemiSky: 0xd8f7ff, hemiGround: 0xffeccc, hemiIntensity: 1.2, sunColor: 0xfff6dc, sunIntensity: 1.6, name: 'Bãi biển', icon: '🏖️'
   },
   forest: {
     sky: ['#7fdcc4', '#c3f0d6', '#f2fbe4'],
-    tileA: 0x7fd04e, tileB: 0x66bb3f, lawn: true, grass: 0x4f9f36, grassTop: 0x62b443, cliff: [0x9a7050, 0x835e43, 0x6c4c36],
+    tileA: 0x78c45b, tileB: 0x70bc54, lawn: true, grass: 0x5aa444, grassTop: 0x68b24f, cliff: [0x9a7050, 0x835e43, 0x6c4c36],
     hemiSky: 0xe8fff2, hemiGround: 0xcfe3bb, hemiIntensity: 1.2, sunColor: 0xfff3d6, sunIntensity: 1.55, name: 'Rừng xanh', icon: '🌲'
   },
   snow: {
     sky: ['#9fd6ff', '#d6efff', '#f6fbff'],
-    tileA: 0xf6fbff, tileB: 0xe2eff9, grass: 0xf4faff, grassTop: 0xffffff, cliff: [0xaec6da, 0x97b1c8, 0x809bb3],
+    tileA: 0xd3ebf7, tileB: 0xcbe5f3, grass: 0xe9f6fd, grassTop: 0xf4fbff, cliff: [0xaec6da, 0x97b1c8, 0x809bb3],
     hemiSky: 0xeef8ff, hemiGround: 0xd8e6f6, hemiIntensity: 1.25, sunColor: 0xf7fbff, sunIntensity: 1.45, name: 'Xứ tuyết', icon: '❄️'
   },
   sunset: {
     sky: ['#b49cff', '#f2b6d6', '#ffd9a6'],
-    tileA: 0xffeadf, tileB: 0xf9d8ca, grass: 0xeea98c, grassTop: 0xf7bea3, cliff: [0xb98a9c, 0x9f748a, 0x866075],
+    tileA: 0xf5c6b0, tileB: 0xf0bea7, grass: 0xe3a488, grassTop: 0xecb398, cliff: [0xb98a9c, 0x9f748a, 0x866075],
     hemiSky: 0xf0d6ff, hemiGround: 0xffd8bf, hemiIntensity: 1.2, sunColor: 0xffd9a8, sunIntensity: 1.5, name: 'Hoàng hôn', icon: '🌇'
   }
 };
@@ -938,7 +938,7 @@ function grassTex(base, seed) {
   const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), R = rng(seed);
   const col = new THREE.Color(base); x.fillStyle = '#' + col.getHexString(); x.fillRect(0, 0, 128, 128);
   for (let i = 0; i < 260; i++) {
-    const px = R() * 128, py = R() * 128, l = 4 + R() * 7, k = R() < 0.5 ? 1.12 : 0.86, cc = col.clone().multiplyScalar(k);
+    const px = R() * 128, py = R() * 128, l = 4 + R() * 7, k = R() < 0.5 ? 1.06 : 0.93, cc = col.clone().multiplyScalar(k);
     x.strokeStyle = '#' + cc.getHexString(); x.lineWidth = 1.6; x.lineCap = 'round';
     x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo(px + (R() - 0.5) * 4, py - l * 0.6, px + (R() - 0.5) * 5, py - l); x.stroke();
   }
@@ -978,17 +978,13 @@ function createWater(p) {
     if (q[0] < 0 || q[1] < 0 || q[0] >= L.size || q[1] >= L.size || isWater(L, q)) continue;
     const e = mk(RB(dx ? 0.08 : 1.0, 0.07, dz ? 0.08 : 1.0, 0.03), M(T.grassTop, 0.8, false, false), g, dx * 0.48, 0.01, dz * 0.48, false);
   }
-  if (Math.random() < 0.35) { const pad = mk(CYL(0.12, 0.12, 0.015, 14), M(0x4fbf5a, 0.6), g, (Math.random() - 0.5) * 0.5, 0.014, (Math.random() - 0.5) * 0.5, false); pad.userData.bob = Math.random() * 6; ambient.push({ type: 'pad2', obj: pad }); }
+  if (!bridgeAt(L, p) && Math.random() < 0.35) { const pad = mk(CYL(0.12, 0.12, 0.015, 14), M(0x4fbf5a, 0.6), g, (Math.random() - 0.5) * 0.5, 0.014, (Math.random() - 0.5) * 0.5, false); pad.userData.bob = Math.random() * 6; ambient.push({ type: 'pad2', obj: pad }); }
 }
 function createBridge(br) {
-  const g = new THREE.Group(); g.position.copy(W(br.at)); root.add(g);
-  g.rotation.y = br.axis === 'h' ? Math.PI / 2 : 0;          // local z = driving direction
-  const wood = M(0xc98b55), woodD = M(0x9c6a3f);
-  for (let k = 0; k < 6; k++) mk(RB(0.78, 0.05, 0.15, 0.02), k % 2 ? wood : M(0xd69b63), g, 0, 0.0, -0.42 + k * 0.168);
-  for (const sx of [-1, 1]) {
-    mk(RB(0.06, 0.06, 1.0, 0.02), woodD, g, sx * 0.4, 0.09, 0);
-    for (const z of [-0.42, 0, 0.42]) mk(RB(0.07, 0.16, 0.07, 0.02), woodD, g, sx * 0.4, 0.04, z);
-  }
+  // same arched bridge as the overpass, turned to follow the river crossing
+  const g = new THREE.Group(); g.position.copy(W(br.at)); g.rotation.y = br.axis === 'h' ? Math.PI / 2 : 0; root.add(g);
+  mk(archBand(0.78, -0.08, 0, 0), M(0xc9e6ff), g);
+  for (const sx of [-1, 1]) mk(archBand(0.08, -0.06, 0.08, sx * 0.4), M(0x2f80ed), g);
 }
 /* ---------- floating island: grass lip, layered earth cliff, hanging rocks, little floating rocks ---------- */
 function buildIsland(n, T) {
@@ -1358,18 +1354,16 @@ function MG(color) {
 function busModel(colorName, cap) {
   const c = COLORS[colorName];
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
-  // one solid block of colour: cab, bed and bumpers share a single glossy paint; wheels a deeper shade of it
-  const paint = MG(c), tire = MG(shade(c, 0.62)), inner = M(shade(c, 0.8), 0.5, false, false);
-  mk(RB(0.86, 0.36, 1.38, 0.18), paint, body, 0, 0.32, 0);                       // main block
-  mk(RB(0.84, 0.3, 0.5, 0.17), paint, body, 0, 0.6, -0.42);                      // cab bump
-  const bz0 = -0.17, bz1 = 0.69, bl = bz1 - bz0, bc = (bz0 + bz1) / 2;
-  for (const sx of [-1, 1]) mk(RB(0.09, 0.22, bl, 0.045), paint, body, sx * 0.385, 0.56, bc);   // bed walls
-  mk(RB(0.86, 0.22, 0.09, 0.045), paint, body, 0, 0.56, bz1 - 0.045);
-  mk(RB(0.7, 0.03, bl - 0.08, 0.015), inner, body, 0, 0.49, bc, false);          // bed floor
+  // one soft rounded block with a taller rounded cab at the front; riders' heads pile up on the flat top
+  const paint = MG(c), tire = MG(shade(c, 0.6)), lid = M(shade(c, 0.78), 0.5, false, false);
+  mk(RB(0.88, 0.46, 1.36, 0.15), paint, body, 0, 0.36, 0.0);                      // body (top 0.59)
+  mk(RB(0.88, 0.64, 0.48, 0.15), paint, body, 0, 0.45, -0.44);                    // cab (top 0.75)
+  const bz0 = -0.18, bz1 = 0.66, bl = bz1 - bz0, bc = (bz0 + bz1) / 2;
+  mk(RB(0.74, 0.02, bl, 0.01), lid, body, 0, 0.595, bc, false);                  // darker tray lid under the heads
   const wheels = [];
-  for (const sx of [-1, 1]) for (const z of [-0.42, 0.44]) {
-    const w = new THREE.Group(); w.position.set(sx * 0.4, 0.15, z); body.add(w);
-    mk(CYL(0.16, 0.16, 0.13, 24), tire, w).rotation.z = Math.PI / 2;
+  for (const sx of [-1, 1]) for (const z of [-0.43, 0.45]) {
+    const w = new THREE.Group(); w.position.set(sx * 0.37, 0.12, z); body.add(w);
+    mk(CYL(0.12, 0.12, 0.12, 20), tire, w).rotation.z = Math.PI / 2;
     wheels.push(w);
   }
   // riders packed in the bed
@@ -1380,7 +1374,7 @@ function busModel(colorName, cap) {
     for (let col = 0; col < cols; col++) {
       const k = row * cols + col; if (k >= N) break;
       const x = cols === 3 ? (col - 1) * 0.21 : (col ? 0.15 : -0.15);
-      const pp = person(colorName, 0.78);
+      const pp = person(colorName, 1.0);               // bodies hidden in the block, heads form a pile of balls
       pp.position.set(x, 0.4, z); pp.rotation.y = Math.PI;
       pp.userData.baseY = 0.4; pose(pp, 'sit', 0);
       pp.visible = false; body.add(pp); slots.push(pp);
@@ -1497,7 +1491,7 @@ function cap(p, r, y, mat) {
   m.position.set(p.x, y, p.z); m.receiveShadow = true; root.add(m); routeObjs.push(m);
 }
 const roadMats = {};
-const ROAD_COLORS = { city: [0xf6d9a6, 0xe2b77f], forest: [0xf3d39c, 0xd9ab72], beach: [0xfff8ea, 0xebd3a6], snow: [0xe3edf6, 0xc3d3e2], sunset: [0xfff0e3, 0xe8c1ac] };
+const ROAD_COLORS = { city: [0xf7d9a8, 0xe6bd88], forest: [0xf3d39e, 0xdcb07a], beach: [0xfff6e2, 0xe7cc9c], snow: [0xf1f9fe, 0xb7d8ea], sunset: [0xffece2, 0xe0a98f] };
 function roadMat(kind, color) {
   const k = kind + color;
   if (roadMats[k]) return roadMats[k];
@@ -1513,13 +1507,23 @@ let tipMarks = [], flowDots = [];
 function bridgeLift(route) {
   const overs = [];
   route.forEach((p, k) => {
-    if (!isCross(L, p) || k === 0) return;
+    if (k === 0) return;
+    const br = bridgeAt(L, p);
+    if (br) { const o = W(p); o.alongX = br.axis === 'h'; overs.push(o); return; }
+    if (!isCross(L, p)) return;
     const inAlongX = route[k - 1][1] === p[1];
     const outAlongX = k === route.length - 1 || route[k + 1][1] === p[1];
-    if (inAlongX && outAlongX) overs.push(W(p));
+    if (inAlongX && outAlongX) { const o = W(p); o.alongX = true; overs.push(o); }
   });
   if (!overs.length) return null;
-  return pt => { let m = 0; for (const o of overs) if (Math.abs(pt.z - o.z) < 0.42) m = Math.max(m, archY(Math.abs(pt.x - o.x))); return m; };
+  return pt => {
+    let m = 0;
+    for (const o of overs) {
+      if (o.alongX) { if (Math.abs(pt.z - o.z) < 0.42) m = Math.max(m, archY(Math.abs(pt.x - o.x))); }
+      else if (Math.abs(pt.x - o.x) < 0.42) m = Math.max(m, archY(Math.abs(pt.z - o.z)));
+    }
+    return m;
+  };
 }
 function rebuildRoutes() {
   routeObjs.forEach(o => { root.remove(o); disposeObj(o); }); routeObjs = [];
@@ -2161,7 +2165,9 @@ function bridgeAnchors(r) {
   if (r.overs) return r.overs;
   r.overs = [];
   r.route.forEach((p, i) => {
-    if (!isCross(L, p) || i === 0 || i === r.route.length - 1) return;
+    if (i === 0 || i === r.route.length - 1) return;
+    if (bridgeAt(L, p)) { r.overs.push(r.pl.anchors[i]); return; }    // river bridge: always driven along its axis
+    if (!isCross(L, p)) return;
     if (r.route[i - 1][1] === p[1] && r.route[i + 1][1] === p[1]) r.overs.push(r.pl.anchors[i]);
   });
   return r.overs;
@@ -2416,7 +2422,7 @@ function update(dt) {
     if (u.shake > 0) { u.shake -= dt * 0.7; u.body.position.x = Math.sin(T * 50) * 0.05 * u.shake; } else u.body.position.x = 0;
     for (const s of u.slots) {
       if (!s.visible) continue;
-      if (s.userData.pop > 0) { s.userData.pop = Math.max(0, s.userData.pop - dt * 4); const k = 1 + Math.sin(s.userData.pop * Math.PI) * 0.5; s.scale.setScalar(0.82 * k); }
+      if (s.userData.pop > 0) { s.userData.pop = Math.max(0, s.userData.pop - dt * 4); const k = 1 + Math.sin(s.userData.pop * Math.PI) * 0.5; s.scale.setScalar(s.userData.s * k); }
       const rv = mode === 'run' && runners[i] ? runners[i].v : 0, ph = s.userData.phase;
       s.position.y = s.userData.baseY + Math.abs(Math.sin(T * (6 + rv * 3) + ph)) * (0.02 + rv * 0.012);
       s.rotation.z = -u.lean * 1.6;                                    // riders sway the other way in turns
