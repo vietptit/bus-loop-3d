@@ -1358,37 +1358,18 @@ function MG(color) {
 function busModel(colorName, cap) {
   const c = COLORS[colorName];
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
-  const paint = MG(c), dark = MG(shade(c, 0.72)), light = MG(tint(c, 0.35)), tire = M(0x30333d), hub = M(0xf4f6fa);
-  const glass = new THREE.MeshPhongMaterial({ color: tint(c, 0.6), shininess: 120, specular: 0xffffff, transparent: true, opacity: 0.85 });
-  glass.userData.outlineParameters = { visible: false };
-  // chunky lower body
-  mk(RB(0.84, 0.32, 1.36, 0.16), paint, body, 0, 0.3, 0);
-  // cab at the front, sloped windshield in a lighter tint of the body colour
-  mk(RB(0.82, 0.32, 0.46, 0.16), paint, body, 0, 0.56, -0.43);
-  const ws = mk(RB(0.66, 0.2, 0.04, 0.03), glass, body, 0, 0.6, -0.665, false); ws.rotation.x = -0.28;
-  for (const sx of [-1, 1]) mk(RB(0.04, 0.15, 0.26, 0.03), glass, body, sx * 0.412, 0.6, -0.43, false);
-  mk(RB(0.6, 0.035, 0.3, 0.017), light, body, 0, 0.735, -0.43, false);                     // roof shine strip
-  // deep open cargo bed: riders sit low so only their round heads show over the rim
-  const bz0 = -0.18, bz1 = 0.66, bl = bz1 - bz0, bc = (bz0 + bz1) / 2;
-  mk(RB(0.7, 0.03, bl - 0.06, 0.015), dark, body, 0, 0.47, bc, false);
-  for (const sx of [-1, 1]) mk(RB(0.08, 0.2, bl, 0.04), paint, body, sx * 0.38, 0.55, bc);
-  mk(RB(0.84, 0.2, 0.08, 0.04), paint, body, 0, 0.55, bz1 - 0.04);
-  mk(RB(0.84, 0.2, 0.06, 0.03), paint, body, 0, 0.55, bz0);
-  for (const sx of [-1, 1]) mk(RB(0.085, 0.03, bl, 0.015), light, body, sx * 0.38, 0.655, bc, false);   // rim highlight
-  // bumpers + lights
-  mk(RB(0.86, 0.09, 0.09, 0.045), dark, body, 0, 0.18, -0.69);
-  mk(RB(0.86, 0.09, 0.09, 0.045), dark, body, 0, 0.18, 0.69);
-  for (const sx of [-1, 1]) {
-    mk(SPH(0.055, 14, 10), M(0xfff6cf, 0.3, false, false), body, sx * 0.29, 0.33, -0.68, false);
-    mk(RB(0.09, 0.07, 0.03, 0.015), M(0xff4b4b, 0.3, false, false), body, sx * 0.3, 0.34, 0.685, false);
-  }
-  // chunky wheels with white hubs
+  // one solid block of colour: cab, bed and bumpers share a single glossy paint; wheels a deeper shade of it
+  const paint = MG(c), tire = MG(shade(c, 0.62)), inner = M(shade(c, 0.8), 0.5, false, false);
+  mk(RB(0.86, 0.36, 1.38, 0.18), paint, body, 0, 0.32, 0);                       // main block
+  mk(RB(0.84, 0.3, 0.5, 0.17), paint, body, 0, 0.6, -0.42);                      // cab bump
+  const bz0 = -0.17, bz1 = 0.69, bl = bz1 - bz0, bc = (bz0 + bz1) / 2;
+  for (const sx of [-1, 1]) mk(RB(0.09, 0.22, bl, 0.045), paint, body, sx * 0.385, 0.56, bc);   // bed walls
+  mk(RB(0.86, 0.22, 0.09, 0.045), paint, body, 0, 0.56, bz1 - 0.045);
+  mk(RB(0.7, 0.03, bl - 0.08, 0.015), inner, body, 0, 0.49, bc, false);          // bed floor
   const wheels = [];
   for (const sx of [-1, 1]) for (const z of [-0.42, 0.44]) {
-    const w = new THREE.Group(); w.position.set(sx * 0.39, 0.15, z); body.add(w);
-    mk(CYL(0.16, 0.16, 0.14, 24), tire, w).rotation.z = Math.PI / 2;
-    mk(CYL(0.075, 0.075, 0.15, 18), hub, w, 0, 0, 0, false).rotation.z = Math.PI / 2;
-    mk(CYL(0.03, 0.03, 0.16, 10), M(shade(c, 0.7)), w, 0, 0, 0, false).rotation.z = Math.PI / 2;
+    const w = new THREE.Group(); w.position.set(sx * 0.4, 0.15, z); body.add(w);
+    mk(CYL(0.16, 0.16, 0.13, 24), tire, w).rotation.z = Math.PI / 2;
     wheels.push(w);
   }
   // riders packed in the bed
@@ -1516,11 +1497,12 @@ function cap(p, r, y, mat) {
   m.position.set(p.x, y, p.z); m.receiveShadow = true; root.add(m); routeObjs.push(m);
 }
 const roadMats = {};
+const ROAD_COLORS = { city: [0xf6d9a6, 0xe2b77f], forest: [0xf3d39c, 0xd9ab72], beach: [0xfff8ea, 0xebd3a6], snow: [0xe3edf6, 0xc3d3e2], sunset: [0xfff0e3, 0xe8c1ac] };
 function roadMat(kind, color) {
   const k = kind + color;
   if (roadMats[k]) return roadMats[k];
   let m;
-  if (kind === 'chev') m = new THREE.MeshBasicMaterial({ color, map: chevronTex, transparent: true, depthWrite: false });
+  if (kind === 'chev') m = new THREE.MeshBasicMaterial({ color, map: chevronTex, transparent: true, opacity: 0.6, depthWrite: false });
   else if (kind === 'ghost') m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.45, depthWrite: false });
   else m = new THREE.MeshStandardMaterial({ color, roughness: 0.95 });
   m.polygonOffset = true; m.polygonOffsetFactor = -1; m.polygonOffsetUnits = -2;
@@ -1550,10 +1532,11 @@ function rebuildRoutes() {
   paths.forEach((r, i) => {
     if (r.length < 2) return;
     const pl = polyline(r), col = COLORS[L.buses[i].color];
-    const edge = roadMat('edge', tint(col, 0.25)), road = roadMat('road', tint(col, 0.72));
+    // soft dirt road in the world's road colour; only the small arrows carry the bus colour
+    const RC = ROAD_COLORS[theme] || ROAD_COLORS.city, edge = roadMat('edge', RC[1]), road = roadMat('road', RC[0]);
     const yo = i * 0.0025, lift = bridgeLift(r);
     for (const pc of pieces(pl)) {
-      if (pc.pts.length > 1) { ribbon(pc, 0.74, 0.026 + yo, edge, 0, lift); ribbon(pc, 0.58, 0.032 + yo, road, 0, lift); ribbon(pc, 0.24, 0.038 + yo, roadMat('chev', col), 0.36, lift); }
+      if (pc.pts.length > 1) { ribbon(pc, 0.7, 0.026 + yo, edge, 0, lift); ribbon(pc, 0.6, 0.032 + yo, road, 0, lift); ribbon(pc, 0.18, 0.038 + yo, roadMat('chev', col), 0.36, lift); }
       const l0 = lift ? lift(pc.pts[0]) : 0, l1 = lift ? lift(pc.pts.at(-1)) : 0;
       cap(pc.pts[0], 0.37, 0.026 + yo + l0, edge); cap(pc.pts.at(-1), 0.37, 0.026 + yo + l1, edge);
       cap(pc.pts[0], 0.29, 0.032 + yo + l0, road); cap(pc.pts.at(-1), 0.29, 0.032 + yo + l1, road);
