@@ -1351,38 +1351,61 @@ function MG(color) {
   }
   return m;
 }
+// van design by Gemini (2026-11-10), reviewed + applied by Claude
 function busModel(colorName, cap) {
   const c = COLORS[colorName];
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
-  // low rounded minivan: one paint colour, windows a lighter tint of it, riders' heads fill the flat roof
-  const paint = MG(c), tire = MG(shade(c, 0.6)), lid = M(shade(c, 0.8), 0.5, false, false);
-  const glass = M(tint(c, 0.38), 0.5, false, false);              // flat lighter tint of the body colour
-  mk(RB(0.86, 0.28, 1.4, 0.13), paint, body, 0, 0.24, 0);                        // lower body (0.10 - 0.38)
-  mk(RB(0.8, 0.2, 1.16, 0.1), paint, body, 0, 0.46, 0.08);                       // cabin, low roof (top 0.56)
-  const ws = mk(RB(0.66, 0.15, 0.03, 0.02), glass, body, 0, 0.45, -0.52, false); ws.rotation.x = -0.55;   // sloped windshield
-  for (const sx of [-1, 1]) mk(RB(0.02, 0.1, 0.92, 0.02), glass, body, sx * 0.402, 0.46, 0.06, false);   // side windows
-  mk(RB(0.62, 0.015, 0.92, 0.008), lid, body, 0, 0.562, 0.1, false);             // roof tray
-  const bz0 = -0.32, bz1 = 0.6, bc = (bz0 + bz1) / 2;
+  const paint = MG(c), tire = MG(shade(c, 0.6));
+  const glass = M(tint(c, 0.4), 0.5, false, false);
+  const hi = M(tint(c, 0.22), 0.5, false, false), tray = M(shade(c, 0.72), 0.5, false, false);
+
+  // Low, wide, strongly-rounded main body & chubby bumpers (length ~1.42, width 0.86, bottom ~0.10)
+  mk(RB(0.86, 0.25, 1.36, 0.12), paint, body, 0, 0.225, 0);
+  mk(RB(0.8, 0.15, 0.24, 0.075), paint, body, 0, 0.18, -0.59);
+  mk(RB(0.8, 0.15, 0.22, 0.075), paint, body, 0, 0.18, 0.6);
+
+  // Squat cabin (roof top ~0.52) + sloped rounded nose wedge at the front (-z)
+  mk(RB(0.78, 0.23, 0.98, 0.1), paint, body, 0, 0.405, 0.15);
+  const nose = mk(RB(0.76, 0.2, 0.44, 0.09), paint, body, 0, 0.35, -0.37); nose.rotation.x = -0.46;
+
+  // Sloped windshield, split minivan side windows & rear window in lighter body tint
+  const ws = mk(RB(0.64, 0.03, 0.27, 0.014), glass, body, 0, 0.438, -0.415, false); ws.rotation.x = -0.46;
+  mk(RB(0.56, 0.095, 0.03, 0.02), glass, body, 0, 0.425, 0.632, false);
+  for (const sx of [-1, 1]) {
+    mk(RB(0.03, 0.105, 0.28, 0.02), glass, body, sx * 0.382, 0.425, -0.11, false);
+    mk(RB(0.03, 0.105, 0.42, 0.02), glass, body, sx * 0.382, 0.425, 0.31, false);
+    mk(SPH(0.042, 12, 10), hi, body, sx * 0.24, 0.24, -0.685, false);
+  }
+  mk(RB(0.28, 0.032, 0.03, 0.015), tray, body, 0, 0.185, -0.702, false);
+
+  // Subtle lighter roof highlight & recessed cargo tray
+  mk(RB(0.68, 0.022, 0.86, 0.01), hi, body, 0, 0.518, 0.15, false);
+  mk(RB(0.58, 0.02, 0.76, 0.01), tray, body, 0, 0.524, 0.15, false);
+
+  // Chunky wheels tucked under the body (local x-axis is axle)
   const wheels = [];
-  for (const sx of [-1, 1]) for (const z of [-0.43, 0.45]) {
-    const w = new THREE.Group(); w.position.set(sx * 0.38, 0.12, z); body.add(w);
-    mk(CYL(0.12, 0.12, 0.12, 20), tire, w).rotation.z = Math.PI / 2;
+  for (const sx of [-1, 1]) for (const z of [-0.42, 0.42]) {
+    const w = new THREE.Group(); w.position.set(sx * 0.355, 0.13, z); body.add(w);
+    mk(CYL(0.13, 0.13, 0.15, 20), tire, w).rotation.z = Math.PI / 2;
+    mk(CYL(0.06, 0.06, 0.156, 14), hi, w, 0, 0, 0, false).rotation.z = Math.PI / 2;
     wheels.push(w);
   }
-  // riders packed in the bed
+
+  // Riders packed tightly in the roof tray so only their round heads poke ~half above the roof
   const per = perUnit(cap), N = per * cap, cols = N >= 6 ? 3 : 2, rows = Math.ceil(N / cols), slots = [];
-  const z0 = bz0 + 0.1, z1 = bz1 - 0.1, dz = rows > 1 ? (z1 - z0) / (rows - 1) : 0;
+  const s = 0.88, baseY = 0.31, bc = 0.15;
   for (let row = 0; row < rows; row++) {
-    const z = rows > 1 ? z0 + row * dz : bc;
+    const z = bc + (row - (rows - 1) / 2) * 0.2;
     for (let col = 0; col < cols; col++) {
       const k = row * cols + col; if (k >= N) break;
-      const x = cols === 3 ? (col - 1) * 0.19 : (col ? 0.13 : -0.13);
-      const pp = person(colorName, 0.86);               // bodies hidden in the block, heads form a pile of balls
-      pp.position.set(x, 0.39, z); pp.rotation.y = Math.PI;
-      pp.userData.baseY = 0.39; pose(pp, 'sit', 0);
+      const x = cols === 3 ? (col - 1) * 0.175 : (col ? 0.095 : -0.095);
+      const pp = person(colorName, s);
+      pp.position.set(x, baseY, z); pp.rotation.y = Math.PI;
+      pp.userData.baseY = baseY; pose(pp, 'sit', 0);
       pp.visible = false; body.add(pp); slots.push(pp);
     }
   }
+
   const badge = makeBadge(`0/${cap * perUnit()}`, '#ffffff', hex(colorName)); badge.position.set(0, 1.2, 0); badge.scale.set(0.66, 0.66, 1); g.add(badge);
   g.userData = { body, wheels, slots, per, squash: 0, badge, heading: 0, lean: 0, pitch: 0, shake: 0, hop: 0 };
   const bs = cap <= 1 ? 0.56 : cap === 2 ? 0.64 : 0.68;
