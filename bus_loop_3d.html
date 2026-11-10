@@ -418,7 +418,7 @@ const hex = c => '#' + COLORS[c].toString(16).padStart(6, '0');
 const THEMES = {
   city: {
     sky: ['#8fd8ff', '#c4ecff', '#eaf8ff'],
-    tileA: 0xeef7e6, tileB: 0xdcefd0, grass: 0x8fd17a, grassTop: 0xa7de8f, cliff: [0xd2a57a, 0xbb8d64, 0xa27650],
+    tileA: 0x86dc55, tileB: 0x6fcb45, lawn: true, grass: 0x5fb83c, grassTop: 0x74c94a, cliff: [0xc98f5a, 0xb07a4a, 0x93633b],
     hemiSky: 0xffffff, hemiGround: 0xdfeedd, hemiIntensity: 1.15, sunColor: 0xfff6ea, sunIntensity: 1.6, name: 'Thành phố', icon: '🏙️'
   },
   beach: {
@@ -428,7 +428,7 @@ const THEMES = {
   },
   forest: {
     sky: ['#7fdcc4', '#c3f0d6', '#f2fbe4'],
-    tileA: 0xe6f2d4, tileB: 0xd3e8bd, grass: 0x6fb85a, grassTop: 0x86c96b, cliff: [0xa07a56, 0x8a6849, 0x73563d],
+    tileA: 0x7fd04e, tileB: 0x66bb3f, lawn: true, grass: 0x4f9f36, grassTop: 0x62b443, cliff: [0x9a7050, 0x835e43, 0x6c4c36],
     hemiSky: 0xe8fff2, hemiGround: 0xcfe3bb, hemiIntensity: 1.2, sunColor: 0xfff3d6, sunIntensity: 1.55, name: 'Rừng xanh', icon: '🌲'
   },
   snow: {
@@ -529,8 +529,32 @@ LEVELS.push(
     gates: [{ at: [3, 1], button: [1, 4] }, { at: [3, 5], button: [5, 2] }],
     tip: 'Hai xe mở cổng cho nhau — ai bấm nút trước?' }
 );
+// River levels (2026-11-10): water cells cannot be driven on; a bridge carries one bus straight across.
+LEVELS.push(
+  { name: 'Qua cầu', size: 6, cap: 1,
+    buses: [{ id: 'A', color: 'blue', start: [1, 0], end: [4, 5], solution: [[1,0],[1,1],[2,1],[2,2],[2,3],[3,3],[3,4],[4,4],[4,5]] }],
+    pickups: [{ at: [0, 1], color: 'blue', count: 1 }], stations: [[3, 5]], blocks: [],
+    water: [[0, 2], [1, 2], [3, 2], [4, 2], [5, 2]], bridges: [{ at: [2, 2], axis: 'v' }],
+    tip: 'Xe không bơi được 🌊 — hãy đi qua cầu gỗ!' },
+  { name: 'Mỗi cầu một xe', size: 7, cap: 1,
+    buses: [
+      { id: 'A', color: 'red', start: [0, 1], end: [6, 1], solution: [[0,1],[1,1],[2,1],[2,2],[3,2],[4,2],[4,1],[5,1],[6,1]] },
+      { id: 'B', color: 'green', start: [0, 5], end: [6, 5], solution: [[0,5],[1,5],[2,5],[2,4],[3,4],[4,4],[4,5],[5,5],[6,5]] }],
+    pickups: [{ at: [1, 0], color: 'red', count: 1 }, { at: [1, 6], color: 'green', count: 1 }],
+    stations: [[5, 0], [5, 6]], blocks: [],
+    water: [[3, 0], [3, 1], [3, 3], [3, 5], [3, 6]], bridges: [{ at: [3, 2], axis: 'h' }, { at: [3, 4], axis: 'h' }],
+    tip: 'Mỗi cây cầu chỉ chở được một xe thôi!' },
+  { name: 'Bên kia sông', size: 7, cap: 1,
+    buses: [
+      { id: 'A', color: 'blue', start: [0, 2], end: [6, 6], solution: [[0,2],[1,2],[2,2],[3,2],[3,3],[3,4],[4,4],[5,4],[6,4],[6,5],[6,6]] },
+      { id: 'B', color: 'orange', start: [6, 1], end: [0, 0], solution: [[6,1],[5,1],[4,1],[3,1],[2,1],[1,1],[1,0],[0,0]] }],
+    pickups: [{ at: [4, 5], color: 'blue', count: 1 }, { at: [4, 0], color: 'orange', count: 1 }],
+    stations: [[5, 5], [2, 0]], blocks: [],
+    water: [[0, 3], [1, 3], [2, 3], [4, 3], [5, 3], [6, 3]], bridges: [{ at: [3, 3], axis: 'v' }],
+    tip: 'Chỉ có một cây cầu — xe nào cần qua sông?' }
+);
 LEVELS.forEach(q => {
-  q.gates = q.gates || [];
+  q.gates = q.gates || []; q.water = q.water || []; q.bridges = q.bridges || [];
   q.stationColors = q.stations.map(s => Array.isArray(s) ? null : (s.color || null));
   q.stations = q.stations.map(s => Array.isArray(s) ? s : s.at);
   q.cross = q.cross || []; q.tp = q.tp || [];
@@ -539,6 +563,9 @@ const capOf = (q, b) => b.cap || q.cap;
 const stationOK = (q, k, bus) => !q.stationColors[k] || q.stationColors[k] === bus.color;
 const isCross = (q, p) => q.cross.some(c => c[0] === p[0] && c[1] === p[1]);
 const pairOf = (q, p) => { for (const t of q.tp) { if (t.a[0] === p[0] && t.a[1] === p[1]) return t.b; if (t.b[0] === p[0] && t.b[1] === p[1]) return t.a; } return null; };
+const isWater = (q, p) => q.water.some(c => c[0] === p[0] && c[1] === p[1]) || q.bridges.some(b => b.at[0] === p[0] && b.at[1] === p[1]);
+const bridgeAt = (q, p) => q.bridges.find(b => b.at[0] === p[0] && b.at[1] === p[1]) || null;
+const alongBridge = (br, a, p) => br.axis === 'h' ? a[1] === p[1] : a[0] === p[0];   // step a->p follows the bridge
 const gateAt = (q, p) => q.gates.findIndex(g => g.at[0] === p[0] && g.at[1] === p[1]);
 /* Gate rule: a bus never enters a closed gate cell; it waits on the cell before it. Buttons open gates
    for good, so the result does not depend on timing: run every bus as far as it can, repeat until
@@ -905,6 +932,64 @@ function reset(i = lvl) {
   root.userData.intro = 1;
 }
 
+/* lawn tiles: two-tone checker with painted grass blades (texture), cached per world + shade */
+const tileMats = new Map();
+function grassTex(base, seed) {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), R = rng(seed);
+  const col = new THREE.Color(base); x.fillStyle = '#' + col.getHexString(); x.fillRect(0, 0, 128, 128);
+  for (let i = 0; i < 260; i++) {
+    const px = R() * 128, py = R() * 128, l = 4 + R() * 7, k = R() < 0.5 ? 1.12 : 0.86, cc = col.clone().multiplyScalar(k);
+    x.strokeStyle = '#' + cc.getHexString(); x.lineWidth = 1.6; x.lineCap = 'round';
+    x.beginPath(); x.moveTo(px, py); x.quadraticCurveTo(px + (R() - 0.5) * 4, py - l * 0.6, px + (R() - 0.5) * 5, py - l); x.stroke();
+  }
+  for (let i = 0; i < 5; i++) { x.fillStyle = R() < 0.5 ? 'rgba(255,255,255,.75)' : 'rgba(255,230,90,.85)'; x.beginPath(); x.arc(R() * 128, R() * 128, 1.8, 0, 7); x.fill(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.userData.shared = true; return t;
+}
+function tileMat(T, odd) {
+  const col = odd ? T.tileB : T.tileA, key = col + '/' + !!T.lawn;
+  let m = tileMats.get(key);
+  if (!m) {
+    m = T.lawn ? new THREE.MeshToonMaterial({ color: 0xffffff, map: grassTex(col, col), gradientMap: TOON_GRAD }) : new THREE.MeshToonMaterial({ color: col, gradientMap: TOON_GRAD });
+    m.userData.shared = true; tileMats.set(key, m);
+  }
+  return m;
+}
+/* ---------- water: sunken animated surface; bridges carry exactly one bus straight across ---------- */
+let waterTex = null;
+function waterTexture() {
+  if (waterTex) return waterTex;
+  const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), R = rng(7);
+  const g = x.createLinearGradient(0, 0, 128, 128); g.addColorStop(0, '#45c4f5'); g.addColorStop(1, '#2fa8e8'); x.fillStyle = g; x.fillRect(0, 0, 128, 128);
+  x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = 3; x.lineCap = 'round';
+  for (let i = 0; i < 9; i++) { const px = R() * 128, py = R() * 128; x.beginPath(); x.arc(px, py, 7 + R() * 6, Math.PI * 1.1, Math.PI * 1.9); x.stroke(); }
+  waterTex = new THREE.CanvasTexture(c); waterTex.wrapS = waterTex.wrapT = THREE.RepeatWrapping; waterTex.colorSpace = THREE.SRGBColorSpace; waterTex.userData.shared = true;
+  return waterTex;
+}
+function createWater(p) {
+  const w = W(p), g = new THREE.Group(); g.position.copy(w); root.add(g);
+  const surf = new THREE.MeshBasicMaterial({ map: waterTexture(), transparent: true, opacity: 0.95 });
+  surf.userData.outlineParameters = { visible: false };
+  const s = mk(G('wplane', () => new THREE.PlaneGeometry(1.0, 1.0).rotateX(-Math.PI / 2)), surf, g, 0, 0.004, 0, false);   // just above the island lip, below land tiles
+  s.material.map = waterTexture();
+  // sandy/grassy bank on edges that touch land
+  const T = THEMES[theme];
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    const q = [p[0] + dx, p[1] + dz];
+    if (q[0] < 0 || q[1] < 0 || q[0] >= L.size || q[1] >= L.size || isWater(L, q)) continue;
+    const e = mk(RB(dx ? 0.08 : 1.0, 0.07, dz ? 0.08 : 1.0, 0.03), M(T.grassTop, 0.8, false, false), g, dx * 0.48, 0.01, dz * 0.48, false);
+  }
+  if (Math.random() < 0.35) { const pad = mk(CYL(0.12, 0.12, 0.015, 14), M(0x4fbf5a, 0.6), g, (Math.random() - 0.5) * 0.5, 0.014, (Math.random() - 0.5) * 0.5, false); pad.userData.bob = Math.random() * 6; ambient.push({ type: 'pad2', obj: pad }); }
+}
+function createBridge(br) {
+  const g = new THREE.Group(); g.position.copy(W(br.at)); root.add(g);
+  g.rotation.y = br.axis === 'h' ? Math.PI / 2 : 0;          // local z = driving direction
+  const wood = M(0xc98b55), woodD = M(0x9c6a3f);
+  for (let k = 0; k < 6; k++) mk(RB(0.78, 0.05, 0.15, 0.02), k % 2 ? wood : M(0xd69b63), g, 0, 0.0, -0.42 + k * 0.168);
+  for (const sx of [-1, 1]) {
+    mk(RB(0.06, 0.06, 1.0, 0.02), woodD, g, sx * 0.4, 0.09, 0);
+    for (const z of [-0.42, 0, 0.42]) mk(RB(0.07, 0.16, 0.07, 0.02), woodD, g, sx * 0.4, 0.04, z);
+  }
+}
 /* ---------- floating island: grass lip, layered earth cliff, hanging rocks, little floating rocks ---------- */
 function buildIsland(n, T) {
   const R = rng(lvl * 977 + 13);
@@ -950,8 +1035,11 @@ function buildWorld() {
   buildIsland(n, T);
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) {
     const w = W([x, y]);
-    mk(RB(0.9, 0.04, 0.9, 0.12), M((x + y) % 2 ? T.tileB : T.tileA, 0.8, false, false), root, w.x, 0, w.z, false);
+    if (isWater(L, [x, y])) continue;
+    mk(RB(0.96, 0.04, 0.96, 0.06), tileMat(T, (x + y) % 2), root, w.x, 0, w.z, false);
   }
+  L.water.forEach(p => createWater(p));
+  L.bridges.forEach(b => { createWater(b.at); createBridge(b); });
   L.blocks.forEach((p, i) => createBlock(p, i));
   L.stations.forEach((p, i) => { createStation(p, i); const c = L.stationColors[i]; if (c) { const st = stationVis[i]; paintStation(st, c); st.open = 0; mk(CYL(0.17, 0.2, 0.04, 24), M(COLORS[c]), st.g, 0, 0.02, 0); } });
   L.cross.forEach(p => createCross(p));
@@ -1256,55 +1344,64 @@ function createExit(b) {
 }
 
 /* ---------- BUS: chunky open-top toy bus ---------- */
+// glossy plastic look: Phong with a strong small highlight, still outlined like the rest of the scene
+const glossCache = new Map();
+function MG(color) {
+  let m = glossCache.get(color);
+  if (!m) {
+    m = new THREE.MeshPhongMaterial({ color, shininess: 70, specular: 0x6a6a6a });
+    m.userData.outlineParameters = { thickness: 0.0032, color: outlineOf(color), alpha: 1, visible: true };
+    m.userData.shared = true; glossCache.set(color, m);
+  }
+  return m;
+}
 function busModel(colorName, cap) {
   const c = COLORS[colorName];
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
-  const paint = M(c), cream = M(0xfbe9cf), creamD = M(0xe9cfa8), trim = M(0xf4f6fa), tire = M(0x2b2f3a);
-  const glass = MT(0xbfeeff); glass.transparent = true; glass.opacity = 0.65;
-  // chassis + cream belt line
-  mk(RB(0.8, 0.3, 1.3, 0.14), paint, body, 0, 0.29, 0);
-  mk(RB(0.815, 0.06, 1.12, 0.03), cream, body, 0, 0.3, 0.02, false);
-  // front nose with a big windshield
-  mk(RB(0.8, 0.36, 0.24, 0.12), paint, body, 0, 0.5, -0.53);
-  mk(RB(0.66, 0.2, 0.04, 0.03), glass, body, 0, 0.56, -0.655, false);
-  mk(RB(0.72, 0.05, 0.24, 0.025), trim, body, 0, 0.7, -0.53, false);
+  const paint = MG(c), dark = MG(shade(c, 0.72)), light = MG(tint(c, 0.35)), tire = M(0x30333d), hub = M(0xf4f6fa);
+  const glass = new THREE.MeshPhongMaterial({ color: tint(c, 0.6), shininess: 120, specular: 0xffffff, transparent: true, opacity: 0.85 });
+  glass.userData.outlineParameters = { visible: false };
+  // chunky lower body
+  mk(RB(0.84, 0.32, 1.36, 0.16), paint, body, 0, 0.3, 0);
+  // cab at the front, sloped windshield in a lighter tint of the body colour
+  mk(RB(0.82, 0.32, 0.46, 0.16), paint, body, 0, 0.56, -0.43);
+  const ws = mk(RB(0.66, 0.2, 0.04, 0.03), glass, body, 0, 0.6, -0.665, false); ws.rotation.x = -0.28;
+  for (const sx of [-1, 1]) mk(RB(0.04, 0.15, 0.26, 0.03), glass, body, sx * 0.412, 0.6, -0.43, false);
+  mk(RB(0.6, 0.035, 0.3, 0.017), light, body, 0, 0.735, -0.43, false);                     // roof shine strip
+  // deep open cargo bed: riders sit low so only their round heads show over the rim
+  const bz0 = -0.18, bz1 = 0.66, bl = bz1 - bz0, bc = (bz0 + bz1) / 2;
+  mk(RB(0.7, 0.03, bl - 0.06, 0.015), dark, body, 0, 0.47, bc, false);
+  for (const sx of [-1, 1]) mk(RB(0.08, 0.2, bl, 0.04), paint, body, sx * 0.38, 0.55, bc);
+  mk(RB(0.84, 0.2, 0.08, 0.04), paint, body, 0, 0.55, bz1 - 0.04);
+  mk(RB(0.84, 0.2, 0.06, 0.03), paint, body, 0, 0.55, bz0);
+  for (const sx of [-1, 1]) mk(RB(0.085, 0.03, bl, 0.015), light, body, sx * 0.38, 0.655, bc, false);   // rim highlight
+  // bumpers + lights
+  mk(RB(0.86, 0.09, 0.09, 0.045), dark, body, 0, 0.18, -0.69);
+  mk(RB(0.86, 0.09, 0.09, 0.045), dark, body, 0, 0.18, 0.69);
   for (const sx of [-1, 1]) {
-    mk(CYL(0.062, 0.062, 0.04, 20), trim, body, sx * 0.28, 0.3, -0.66, false).rotation.x = Math.PI / 2;
-    mk(CYL(0.045, 0.045, 0.045, 20), M(0xfff3c2), body, sx * 0.28, 0.3, -0.666, false).rotation.x = Math.PI / 2;
-    mk(RB(0.1, 0.06, 0.03, 0.015), M(0xff4b4b), body, sx * 0.29, 0.34, 0.655, false);
+    mk(SPH(0.055, 14, 10), M(0xfff6cf, 0.3, false, false), body, sx * 0.29, 0.33, -0.68, false);
+    mk(RB(0.09, 0.07, 0.03, 0.015), M(0xff4b4b, 0.3, false, false), body, sx * 0.3, 0.34, 0.685, false);
   }
-  mk(RB(0.84, 0.08, 0.08, 0.04), trim, body, 0, 0.17, -0.66);
-  mk(RB(0.84, 0.08, 0.08, 0.04), trim, body, 0, 0.17, 0.66);
-  // open passenger deck: low rims, window posts and a top rail, no roof
-  mk(RB(0.66, 0.02, 0.98, 0.01), creamD, body, 0, 0.445, 0.1, false);
-  for (const sx of [-1, 1]) {
-    mk(RB(0.07, 0.12, 1.02, 0.035), paint, body, sx * 0.365, 0.5, 0.1);
-    for (const z of [-0.3, 0.07, 0.44]) mk(RB(0.04, 0.17, 0.04, 0.015), trim, body, sx * 0.365, 0.63, z, false);
-    mk(RB(0.045, 0.035, 1.0, 0.015), trim, body, sx * 0.365, 0.715, 0.08, false);
-  }
-  mk(RB(0.8, 0.12, 0.07, 0.035), paint, body, 0, 0.5, 0.625);
-  // wheels
+  // chunky wheels with white hubs
   const wheels = [];
-  for (const sx of [-1, 1]) for (const z of [-0.4, 0.42]) {
-    const w = new THREE.Group(); w.position.set(sx * 0.38, 0.15, z); body.add(w);
-    mk(CYL(0.15, 0.15, 0.13, 24), tire, w).rotation.z = Math.PI / 2;
-    mk(CYL(0.08, 0.08, 0.14, 18), cream, w, 0, 0, 0, false).rotation.z = Math.PI / 2;
-    mk(CYL(0.03, 0.03, 0.15, 10), M(shade(c, 0.7)), w, 0, 0, 0, false).rotation.z = Math.PI / 2;
+  for (const sx of [-1, 1]) for (const z of [-0.42, 0.44]) {
+    const w = new THREE.Group(); w.position.set(sx * 0.39, 0.15, z); body.add(w);
+    mk(CYL(0.16, 0.16, 0.14, 24), tire, w).rotation.z = Math.PI / 2;
+    mk(CYL(0.075, 0.075, 0.15, 18), hub, w, 0, 0, 0, false).rotation.z = Math.PI / 2;
+    mk(CYL(0.03, 0.03, 0.16, 10), M(shade(c, 0.7)), w, 0, 0, 0, false).rotation.z = Math.PI / 2;
     wheels.push(w);
   }
-  // seats + seated passengers
+  // riders packed in the bed
   const per = perUnit(cap), N = per * cap, cols = N >= 6 ? 3 : 2, rows = Math.ceil(N / cols), slots = [];
-  const z0 = -0.3, z1 = 0.48, dz = rows > 1 ? (z1 - z0) / (rows - 1) : 0;
+  const z0 = bz0 + 0.14, z1 = bz1 - 0.16, dz = rows > 1 ? (z1 - z0) / (rows - 1) : 0;
   for (let row = 0; row < rows; row++) {
-    const z = rows > 1 ? z0 + row * dz : 0.1;
+    const z = rows > 1 ? z0 + row * dz : bc;
     for (let col = 0; col < cols; col++) {
       const k = row * cols + col; if (k >= N) break;
-      const x = cols === 3 ? (col - 1) * 0.2 : (col ? 0.15 : -0.15), sw = cols === 3 ? 0.18 : 0.26;
-      mk(RB(sw, 0.05, 0.12, 0.025), cream, body, x, 0.475, z, false);
-      mk(RB(sw, 0.14, 0.045, 0.02), cream, body, x, 0.55, z + 0.07);
+      const x = cols === 3 ? (col - 1) * 0.21 : (col ? 0.15 : -0.15);
       const pp = person(colorName, 0.78);
-      pp.position.set(x, 0.43, z); pp.rotation.y = Math.PI;
-      pp.userData.baseY = 0.43; pose(pp, 'sit', 0);
+      pp.position.set(x, 0.4, z); pp.rotation.y = Math.PI;
+      pp.userData.baseY = 0.4; pose(pp, 'sit', 0);
       pp.visible = false; body.add(pp); slots.push(pp);
     }
   }
@@ -1518,6 +1615,9 @@ function verify(q) {
       if (p[0] < 0 || p[1] < 0 || p[0] >= q.size || p[1] >= q.size || own.has(k)) return false;
       own.add(k);
       if (q.blocks.some(x => eq(x, p)) || q.stations.some(x => eq(x, p)) || q.pickups.some(x => eq(x.at, p))) return false;
+      const br = bridgeAt(q, p);
+      if (isWater(q, p) && !br) return false;
+      if (br) { if (i === 0 || i === r.length - 1 || !alongBridge(br, r[i - 1], p) || !alongBridge(br, r[i + 1], p)) return false; }
       if (q.buses.some(o => o !== b && (eq(o.start, p) || eq(o.end, p)))) return false;
       const n = (use.get(k) || 0) + 1; use.set(k, n);
       if (isCross(q, p)) {
@@ -1559,6 +1659,7 @@ function blockReason(p, i) {
   if (L.pickups.some(q => eq(q.at, p))) return 'Không đi xuyên qua cờ khách 🚩';
   if (L.stations.some(q => eq(q, p))) return 'Không đi xuyên qua trạm 🏳️';
   if (L.blocks.some(q => eq(q, p))) return 'Có vật cản ở đây 🌳';
+  if (isWater(L, p) && !bridgeAt(L, p)) return 'Xe không đi dưới nước 🌊 — hãy qua cầu';
   if (L.buses.some((b, j) => j !== i && (eq(b.start, p) || eq(b.end, p)))) return 'Ô của xe khác 🚚';
   const others = paths.filter((r, j) => j !== i && r.some(q => eq(q, p))).length;
   if (others && (!isCross(L, p) || others > 1)) return 'Trùng đường xe khác 💥';
@@ -1587,6 +1688,8 @@ function tryExtend(p, quiet = false) {
     if (p[0] - tip[0] !== tip[0] - prev[0] || p[1] - tip[1] !== tip[1] - prev[1]) why = 'Phải đi thẳng qua cầu vượt ➡️';
   }
   if (!why && eq(p, L.buses[i].end) && isCross(L, p)) why = 'Không dừng trên cầu vượt';
+  if (!why && bridgeAt(L, p) && !alongBridge(bridgeAt(L, p), tip, p)) why = 'Lên cầu theo đúng hướng cầu 🌉';
+  if (!why && bridgeAt(L, tip) && r.length >= 2 && !alongBridge(bridgeAt(L, tip), tip, p)) why = 'Phải đi thẳng hết cầu ➡️';
   if (why) {
     if (!quiet && !eq(lastBad, p)) { lastBad = p; flashCell(p); toast(why, 'bad'); SFX.bad(); buzz(30); }
     return false;
@@ -1953,7 +2056,8 @@ const MECHS = [
   { key: 'col', icon: '🚩', name: 'Trạm màu', has: q => q.stationColors.some(Boolean) },
   { key: 'tun', icon: '🌉', name: 'Cầu vượt', has: q => q.cross.length > 0 },
   { key: 'tp', icon: '🌀', name: 'Dịch chuyển', has: q => q.tp.length > 0 },
-  { key: 'gate', icon: '🔘', name: 'Nút bấm – cổng', has: q => q.gates.length > 0 }
+  { key: 'gate', icon: '🔘', name: 'Nút bấm – cổng', has: q => q.gates.length > 0 },
+  { key: 'water', icon: '🌊', name: 'Sông và cầu', has: q => q.bridges.length > 0 }
 ];
 function openLevels() {
   const firstSeen = {};
@@ -2263,7 +2367,8 @@ function update(dt) {
       a.obj.position.z = a.z + Math.cos(T * a.speed * 0.8 + a.phase) * 0.18;
       a.obj.position.y = a.y + Math.sin(T * 1.1 + a.phase) * 0.12;
       a.obj.material.opacity = 0.35 + 0.6 * (0.5 + 0.5 * Math.sin(T * 2.4 + a.phase));
-    } else if (a.type === 'float') { a.obj.position.y = a.y + Math.sin(T * 1.1 + a.phase) * 0.06; a.obj.rotation.y += dt * 0.2; }
+    } else if (a.type === 'pad2') { a.obj.position.y = 0.014 + Math.sin(T * 1.5 + a.obj.userData.bob) * 0.006; a.obj.rotation.y += dt * 0.15; }
+    else if (a.type === 'float') { a.obj.position.y = a.y + Math.sin(T * 1.1 + a.phase) * 0.06; a.obj.rotation.y += dt * 0.2; }
     else if (a.type === 'spin') a.obj.rotation.z -= dt * 1.4;
     else if (a.type === 'spinY') a.obj.rotation.y -= dt * 3;
     else if (a.type === 'sway') a.obj.rotation.z = Math.sin(T * 1.3 + a.obj.userData.sway) * 0.03;
@@ -2346,6 +2451,7 @@ function update(dt) {
     f.visible = true; f.position.set(p.x, 0.12 + (lift ? lift(p) : 0), p.z);
   }
   chevronTex.offset.x -= dt * (mode === 'run' ? 2.2 : 1.1);
+  if (waterTex) { waterTex.offset.x = Math.sin(T * 0.4) * 0.08; waterTex.offset.y -= dt * 0.04; }
 
   if (mode === 'run') updateRunners(sdt);
   updateGates(mode === 'run' ? sdt : dt);
