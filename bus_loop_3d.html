@@ -1354,29 +1354,32 @@ function MG(color) {
 function busModel(colorName, cap) {
   const c = COLORS[colorName];
   const g = new THREE.Group(), body = new THREE.Group(); g.add(body);
-  // one soft rounded block with a taller rounded cab at the front; riders' heads pile up on the flat top
-  const paint = MG(c), tire = MG(shade(c, 0.6)), lid = M(shade(c, 0.78), 0.5, false, false);
-  mk(RB(0.88, 0.46, 1.36, 0.15), paint, body, 0, 0.36, 0.0);                      // body (top 0.59)
-  mk(RB(0.88, 0.64, 0.48, 0.15), paint, body, 0, 0.45, -0.44);                    // cab (top 0.75)
-  const bz0 = -0.18, bz1 = 0.66, bl = bz1 - bz0, bc = (bz0 + bz1) / 2;
-  mk(RB(0.74, 0.02, bl, 0.01), lid, body, 0, 0.595, bc, false);                  // darker tray lid under the heads
+  // low rounded minivan: one paint colour, windows a lighter tint of it, riders' heads fill the flat roof
+  const paint = MG(c), tire = MG(shade(c, 0.6)), lid = M(shade(c, 0.8), 0.5, false, false);
+  const glass = M(tint(c, 0.38), 0.5, false, false);              // flat lighter tint of the body colour
+  mk(RB(0.86, 0.28, 1.4, 0.13), paint, body, 0, 0.24, 0);                        // lower body (0.10 - 0.38)
+  mk(RB(0.8, 0.2, 1.16, 0.1), paint, body, 0, 0.46, 0.08);                       // cabin, low roof (top 0.56)
+  const ws = mk(RB(0.66, 0.15, 0.03, 0.02), glass, body, 0, 0.45, -0.52, false); ws.rotation.x = -0.55;   // sloped windshield
+  for (const sx of [-1, 1]) mk(RB(0.02, 0.1, 0.92, 0.02), glass, body, sx * 0.402, 0.46, 0.06, false);   // side windows
+  mk(RB(0.62, 0.015, 0.92, 0.008), lid, body, 0, 0.562, 0.1, false);             // roof tray
+  const bz0 = -0.32, bz1 = 0.6, bc = (bz0 + bz1) / 2;
   const wheels = [];
   for (const sx of [-1, 1]) for (const z of [-0.43, 0.45]) {
-    const w = new THREE.Group(); w.position.set(sx * 0.37, 0.12, z); body.add(w);
+    const w = new THREE.Group(); w.position.set(sx * 0.38, 0.12, z); body.add(w);
     mk(CYL(0.12, 0.12, 0.12, 20), tire, w).rotation.z = Math.PI / 2;
     wheels.push(w);
   }
   // riders packed in the bed
   const per = perUnit(cap), N = per * cap, cols = N >= 6 ? 3 : 2, rows = Math.ceil(N / cols), slots = [];
-  const z0 = bz0 + 0.14, z1 = bz1 - 0.16, dz = rows > 1 ? (z1 - z0) / (rows - 1) : 0;
+  const z0 = bz0 + 0.1, z1 = bz1 - 0.1, dz = rows > 1 ? (z1 - z0) / (rows - 1) : 0;
   for (let row = 0; row < rows; row++) {
     const z = rows > 1 ? z0 + row * dz : bc;
     for (let col = 0; col < cols; col++) {
       const k = row * cols + col; if (k >= N) break;
-      const x = cols === 3 ? (col - 1) * 0.21 : (col ? 0.15 : -0.15);
-      const pp = person(colorName, 1.0);               // bodies hidden in the block, heads form a pile of balls
-      pp.position.set(x, 0.4, z); pp.rotation.y = Math.PI;
-      pp.userData.baseY = 0.4; pose(pp, 'sit', 0);
+      const x = cols === 3 ? (col - 1) * 0.19 : (col ? 0.13 : -0.13);
+      const pp = person(colorName, 0.86);               // bodies hidden in the block, heads form a pile of balls
+      pp.position.set(x, 0.39, z); pp.rotation.y = Math.PI;
+      pp.userData.baseY = 0.39; pose(pp, 'sit', 0);
       pp.visible = false; body.add(pp); slots.push(pp);
     }
   }
