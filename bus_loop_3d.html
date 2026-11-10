@@ -608,11 +608,11 @@ const ICO = (r, d = 1) => G(`ico${r}/${d}`, () => new THREE.IcosahedronGeometry(
 const DOD = r => G(`dod${r}`, () => new THREE.DodecahedronGeometry(r, 0));
 const RING = (a, b) => G(`ring${a}/${b}`, () => new THREE.RingGeometry(a, b, 40).rotateX(-Math.PI / 2));
 const matCache = new Map();
-const TOON_GRAD = (() => { const d = new Uint8Array([150, 205, 255]); const tx = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); tx.minFilter = tx.magFilter = THREE.NearestFilter; tx.needsUpdate = true; tx.userData.shared = true; return tx; })();
+const TOON_GRAD = (() => { const d = new Uint8Array([125, 195, 255]); const tx = new THREE.DataTexture(d, 3, 1, THREE.RedFormat); tx.minFilter = tx.magFilter = THREE.NearestFilter; tx.needsUpdate = true; tx.userData.shared = true; return tx; })();
 function outlineOf(color) { const c = new THREE.Color(color).multiplyScalar(0.42); c.offsetHSL(0, 0.1, -0.02); return [c.r, c.g, c.b]; }
 function MT(color, outline = true) {
   const m = new THREE.MeshToonMaterial({ color, gradientMap: TOON_GRAD });
-  if (outline) m.userData.outlineParameters = { thickness: 0.0032, color: outlineOf(color), alpha: 1, visible: true };
+  if (outline) m.userData.outlineParameters = { thickness: 0.0046, color: outlineOf(color), alpha: 1, visible: true };
   return m;
 }
 function M(color, rough = 0.5, flat = false, outline = true) {
@@ -956,29 +956,46 @@ function tileMat(T, odd) {
 }
 /* ---------- water: sunken animated surface; bridges carry exactly one bus straight across ---------- */
 let waterTex = null;
+// bright turquoise pool water: soft vertical gradient + wavy sun-caustic highlights (tileable)
+let waterTex2 = null;
 function waterTexture() {
   if (waterTex) return waterTex;
-  const c = document.createElement('canvas'); c.width = c.height = 128; const x = c.getContext('2d'), R = rng(7);
-  const g = x.createLinearGradient(0, 0, 128, 128); g.addColorStop(0, '#45c4f5'); g.addColorStop(1, '#2fa8e8'); x.fillStyle = g; x.fillRect(0, 0, 128, 128);
-  x.strokeStyle = 'rgba(255,255,255,.55)'; x.lineWidth = 3; x.lineCap = 'round';
-  for (let i = 0; i < 9; i++) { const px = R() * 128, py = R() * 128; x.beginPath(); x.arc(px, py, 7 + R() * 6, Math.PI * 1.1, Math.PI * 1.9); x.stroke(); }
+  const N = 256, c = document.createElement('canvas'); c.width = c.height = N; const x = c.getContext('2d'), R = rng(7);
+  const g = x.createLinearGradient(0, 0, 0, N); g.addColorStop(0, '#5fe0ff'); g.addColorStop(0.5, '#86ecff'); g.addColorStop(1, '#5fe0ff');
+  x.fillStyle = g; x.fillRect(0, 0, N, N);
+  x.lineCap = 'round'; x.lineJoin = 'round';
+  for (let i = 0; i < 16; i++) {                     // caustic streaks, drawn 3x horizontally so the texture tiles
+    const y0 = R() * N, amp = 4 + R() * 7, len = 50 + R() * 90, x0 = R() * N, ph = R() * 6;
+    x.strokeStyle = `rgba(255,255,255,${0.35 + R() * 0.4})`; x.lineWidth = 2 + R() * 3;
+    for (const off of [-N, 0, N]) {
+      x.beginPath();
+      for (let k = 0; k <= 20; k++) { const px = x0 + off + len * k / 20, py = y0 + Math.sin(ph + k * 0.6) * amp; k ? x.lineTo(px, py) : x.moveTo(px, py); }
+      x.stroke();
+    }
+  }
+  for (let i = 0; i < 26; i++) { x.fillStyle = 'rgba(255,255,255,.8)'; x.beginPath(); x.arc(R() * N, R() * N, 1 + R() * 1.6, 0, 7); x.fill(); }
   waterTex = new THREE.CanvasTexture(c); waterTex.wrapS = waterTex.wrapT = THREE.RepeatWrapping; waterTex.colorSpace = THREE.SRGBColorSpace; waterTex.userData.shared = true;
+  waterTex2 = waterTex.clone(); waterTex2.needsUpdate = true; waterTex2.repeat.set(0.7, 0.7); waterTex2.userData.shared = true;
   return waterTex;
 }
 function createWater(p) {
   const w = W(p), g = new THREE.Group(); g.position.copy(w); root.add(g);
-  const surf = new THREE.MeshBasicMaterial({ map: waterTexture(), transparent: true, opacity: 0.95 });
-  surf.userData.outlineParameters = { visible: false };
-  const s = mk(G('wplane', () => new THREE.PlaneGeometry(1.0, 1.0).rotateX(-Math.PI / 2)), surf, g, 0, 0.004, 0, false);   // just above the island lip, below land tiles
-  s.material.map = waterTexture();
-  // sandy/grassy bank on edges that touch land
-  const T = THEMES[theme];
+  const plane = G('wplane', () => new THREE.PlaneGeometry(1.0, 1.0).rotateX(-Math.PI / 2));
+  const surf = new THREE.MeshBasicMaterial({ map: waterTexture() }); surf.userData.outlineParameters = { visible: false };
+  mk(plane, surf, g, 0, 0.004, 0, false);
+  const shim = new THREE.MeshBasicMaterial({ map: waterTex2, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false });
+  shim.userData.outlineParameters = { visible: false };
+  mk(plane, shim, g, 0, 0.007, 0, false);                                            // second drifting shimmer layer
+  // light stone coping on every edge that meets land, with a deeper-blue shadow line just inside it
+  const stone = M(0xeef2f5, 0.6), shadow = new THREE.MeshBasicMaterial({ color: 0x23a6dd, transparent: true, opacity: 0.55, depthWrite: false });
+  shadow.userData.outlineParameters = { visible: false };
   for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
     const q = [p[0] + dx, p[1] + dz];
     if (q[0] < 0 || q[1] < 0 || q[0] >= L.size || q[1] >= L.size || isWater(L, q)) continue;
-    const e = mk(RB(dx ? 0.08 : 1.0, 0.07, dz ? 0.08 : 1.0, 0.03), M(T.grassTop, 0.8, false, false), g, dx * 0.48, 0.01, dz * 0.48, false);
+    mk(RB(dx ? 0.11 : 1.02, 0.06, dz ? 0.11 : 1.02, 0.03), stone, g, dx * 0.47, 0.025, dz * 0.47, false);
+    mk(G('wsh' + (dx ? 'x' : 'z'), () => new THREE.PlaneGeometry(dx ? 0.07 : 1.0, dz ? 0.07 : 1.0).rotateX(-Math.PI / 2)), shadow, g, dx * 0.38, 0.009, dz * 0.38, false);
   }
-  if (!bridgeAt(L, p) && Math.random() < 0.35) { const pad = mk(CYL(0.12, 0.12, 0.015, 14), M(0x4fbf5a, 0.6), g, (Math.random() - 0.5) * 0.5, 0.014, (Math.random() - 0.5) * 0.5, false); pad.userData.bob = Math.random() * 6; ambient.push({ type: 'pad2', obj: pad }); }
+  if (!bridgeAt(L, p) && Math.random() < 0.3) { const pad = mk(CYL(0.12, 0.12, 0.015, 14), M(0x4fbf5a, 0.6), g, (Math.random() - 0.5) * 0.5, 0.014, (Math.random() - 0.5) * 0.5, false); pad.userData.bob = Math.random() * 6; ambient.push({ type: 'pad2', obj: pad }); }
 }
 function createBridge(br) {
   // same arched bridge as the overpass, turned to follow the river crossing
@@ -2465,7 +2482,7 @@ function update(dt) {
     f.visible = true; f.position.set(p.x, 0.12 + (lift ? lift(p) : 0), p.z);
   }
   chevronTex.offset.x -= dt * (mode === 'run' ? 2.2 : 1.1);
-  if (waterTex) { waterTex.offset.x = Math.sin(T * 0.4) * 0.08; waterTex.offset.y -= dt * 0.04; }
+  if (waterTex) { waterTex.offset.x = Math.sin(T * 0.35) * 0.06; waterTex.offset.y -= dt * 0.03; waterTex2.offset.x -= dt * 0.025; waterTex2.offset.y = Math.cos(T * 0.3) * 0.08; }
 
   if (mode === 'run') updateRunners(sdt);
   updateGates(mode === 'run' ? sdt : dt);
